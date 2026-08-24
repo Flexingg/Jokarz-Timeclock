@@ -1,6 +1,5 @@
 package com.randallengineering.jokarztimeclock.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,8 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,24 +27,26 @@ import com.randallengineering.jokarztimeclock.ui.theme.PurpleAccent
 import java.util.Calendar
 
 @Composable
-fun SummaryCards(
+fun GoogleSummaryCards(
     totals: PeriodTotals,
     modifier: Modifier = Modifier
 ) {
     val todayStats = totals.todayStats
 
     Row(
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier.fillMaxWidth()
     ) {
-        // Today Summary Card
-        ElevatedCard(
-            shape = RoundedCornerShape(20.dp),
+        // Today Summary Card (Google Tonal Container)
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            tonalElevation = 2.dp,
             modifier = Modifier.weight(1f)
         ) {
             Column(
                 modifier = Modifier
-                    .padding(14.dp)
+                    .padding(16.dp)
                     .fillMaxWidth()
             ) {
                 Row(
@@ -58,42 +58,39 @@ fun SummaryCards(
                         text = "TODAY",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        letterSpacing = 1.sp
                     )
                     Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = PurpleAccent.copy(alpha = 0.15f)
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                     ) {
                         Text(
                             text = todayStats?.type?.uppercase() ?: "SALARY",
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            color = PurpleAccent,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                Row(
-                    verticalAlignment = Alignment.Bottom
-                ) {
+                Text(
+                    text = PayrollEngine.formatMoney(totals.todayEarnings),
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = EmeraldSuccess
+                )
+
+                if (totals.todayOtEarnings > 0.0) {
                     Text(
-                        text = PayrollEngine.formatMoney(totals.todayEarnings),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = EmeraldSuccess
+                        text = "+${PayrollEngine.formatMoney(totals.todayOtEarnings)} Overtime",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = PurpleAccent
                     )
-                    if (totals.todayOtEarnings > 0.0) {
-                        Text(
-                            text = " +${PayrollEngine.formatMoney(totals.todayOtEarnings)} OT",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = PurpleAccent,
-                            modifier = Modifier.padding(bottom = 2.dp, start = 4.dp)
-                        )
-                    }
                 }
 
                 Text(
@@ -104,8 +101,8 @@ fun SummaryCards(
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
-                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), thickness = 0.8.dp)
-                Spacer(modifier = Modifier.height(6.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), thickness = 0.8.dp)
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -113,9 +110,8 @@ fun SummaryCards(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "TECH CLOCKED",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
+                        text = "Clocked",
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
@@ -134,13 +130,15 @@ fun SummaryCards(
         val dEnd = Calendar.getInstance().apply { timeInMillis = totals.endOfPeriod }
         val periodLabel = "${dStart.get(Calendar.MONTH) + 1}/${dStart.get(Calendar.DAY_OF_MONTH)} - ${dEnd.get(Calendar.MONTH) + 1}/${dEnd.get(Calendar.DAY_OF_MONTH)}"
 
-        ElevatedCard(
-            shape = RoundedCornerShape(20.dp),
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            tonalElevation = 2.dp,
             modifier = Modifier.weight(1f)
         ) {
             Column(
                 modifier = Modifier
-                    .padding(14.dp)
+                    .padding(16.dp)
                     .fillMaxWidth()
             ) {
                 Row(
@@ -152,10 +150,11 @@ fun SummaryCards(
                         text = "PAY PERIOD",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        letterSpacing = 1.sp
                     )
                     Surface(
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RoundedCornerShape(8.dp),
                         color = EmeraldSuccess.copy(alpha = 0.15f)
                     ) {
                         Text(
@@ -168,18 +167,14 @@ fun SummaryCards(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                Row(
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    Text(
-                        text = PayrollEngine.formatMoney(totals.periodEarnings),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = EmeraldSuccess
-                    )
-                }
+                Text(
+                    text = PayrollEngine.formatMoney(totals.periodEarnings),
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = EmeraldSuccess
+                )
 
                 val ptoStr = if (totals.totalPtoHoursPeriod > 0.0) " (${String.format("%.1f", totals.totalPtoHoursPeriod)}h PTO)" else ""
                 Text(
@@ -190,8 +185,8 @@ fun SummaryCards(
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
-                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), thickness = 0.8.dp)
-                Spacer(modifier = Modifier.height(6.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), thickness = 0.8.dp)
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -199,9 +194,8 @@ fun SummaryCards(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "TECH CLOCKED",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
+                        text = "Clocked",
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(

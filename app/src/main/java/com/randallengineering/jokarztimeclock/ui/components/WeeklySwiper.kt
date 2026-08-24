@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,7 +41,7 @@ data class WeekCardData(
 )
 
 @Composable
-fun WeeklySwiper(
+fun GoogleWeeklySwiper(
     state: TimeclockState,
     modifier: Modifier = Modifier
 ) {
@@ -91,39 +91,42 @@ fun WeeklySwiper(
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            letterSpacing = 1.sp,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
         )
 
         LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             items(weekDataList) { data ->
-                ElevatedCard(
-                    shape = RoundedCornerShape(20.dp),
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    tonalElevation = 2.dp,
                     modifier = Modifier.width(260.dp)
                 ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = data.label.uppercase(),
-                                fontSize = 11.sp,
+                                text = data.label,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "${PayrollEngine.formatDurationShort(data.weekClockedMs)} Tech",
-                                fontSize = 10.sp,
+                                fontSize = 11.sp,
                                 fontFamily = FontFamily.Monospace,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         Row(
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -132,14 +135,14 @@ fun WeeklySwiper(
                         ) {
                             Column {
                                 Text(
-                                    text = "SYSTEM INPUT (OT)",
+                                    text = "SYSTEM INPUT",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "${String.format("%.1f", data.weekSystemInput)}h",
-                                    fontSize = 18.sp,
+                                    text = "${String.format("%.1f", data.weekSystemInput)}h OT",
+                                    fontSize = 17.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (data.weekSystemInput > 0) PurpleAccent else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -157,7 +160,7 @@ fun WeeklySwiper(
                                     )
                                     Text(
                                         text = "$bankSign${String.format("%.1f", data.weekBanked)}h",
-                                        fontSize = 18.sp,
+                                        fontSize = 17.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = bankColor
                                     )

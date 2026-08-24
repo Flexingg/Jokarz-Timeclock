@@ -35,7 +35,8 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
     private val taskerBridge = TaskerBridge(application)
 
     // Tick counter for live timer updates
-    private val _tick = MutableStateFlow(0L)
+    private val _tick = MutableStateFlow(System.currentTimeMillis())
+    val tick: StateFlow<Long> = _tick.asStateFlow()
 
     val totals: StateFlow<PeriodTotals> = combine(state, _tick) { s, _ ->
         PayrollEngine.calculatePeriodTotals(s)

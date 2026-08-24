@@ -6,7 +6,6 @@ import java.util.Locale
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,24 +19,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -46,10 +48,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,11 +67,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.randallengineering.jokarztimeclock.data.models.PayMode
 import com.randallengineering.jokarztimeclock.data.models.Session
-import com.randallengineering.jokarztimeclock.ui.components.ClockButton
-import com.randallengineering.jokarztimeclock.ui.components.LiveStatsDrawer
-import com.randallengineering.jokarztimeclock.ui.components.SessionLogList
-import com.randallengineering.jokarztimeclock.ui.components.SummaryCards
-import com.randallengineering.jokarztimeclock.ui.components.WeeklySwiper
+import com.randallengineering.jokarztimeclock.ui.components.GoogleClockHero
+import com.randallengineering.jokarztimeclock.ui.components.GoogleSessionLogList
+import com.randallengineering.jokarztimeclock.ui.components.GoogleSummaryCards
+import com.randallengineering.jokarztimeclock.ui.components.GoogleWeeklySwiper
 import com.randallengineering.jokarztimeclock.ui.dialogs.AddManualShiftDialog
 import com.randallengineering.jokarztimeclock.ui.dialogs.AnalyticsDialog
 import com.randallengineering.jokarztimeclock.ui.dialogs.EditActiveTimerDialog
@@ -79,7 +78,6 @@ import com.randallengineering.jokarztimeclock.ui.dialogs.EditSessionDialog
 import com.randallengineering.jokarztimeclock.ui.dialogs.PtoManagementDialog
 import com.randallengineering.jokarztimeclock.ui.dialogs.SettingsDialog
 import com.randallengineering.jokarztimeclock.ui.dialogs.TimesheetReportDialog
-import com.randallengineering.jokarztimeclock.ui.theme.AmberWarning
 import com.randallengineering.jokarztimeclock.ui.theme.EmeraldSuccess
 import com.randallengineering.jokarztimeclock.ui.theme.JokarzTimeclockTheme
 import com.randallengineering.jokarztimeclock.ui.theme.PurplePrimary
@@ -97,12 +95,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             val state by viewModel.state.collectAsState()
             val totals by viewModel.totals.collectAsState()
+            val currentTick by viewModel.tick.collectAsState()
 
             JokarzTimeclockTheme(themeMode = state.settings.theme) {
-                TimeclockAppScreen(
+                GoogleTimeclockScreen(
                     viewModel = viewModel,
                     state = state,
-                    totals = totals
+                    totals = totals,
+                    currentTick = currentTick
                 )
             }
         }
@@ -127,10 +127,11 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimeclockAppScreen(
+fun GoogleTimeclockScreen(
     viewModel: TimeclockViewModel,
     state: com.randallengineering.jokarztimeclock.data.models.TimeclockState,
-    totals: com.randallengineering.jokarztimeclock.data.models.PeriodTotals
+    totals: com.randallengineering.jokarztimeclock.data.models.PeriodTotals,
+    currentTick: Long
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -161,19 +162,21 @@ fun TimeclockAppScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = PurplePrimary.copy(alpha = 0.2f),
-                            modifier = Modifier.size(34.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(36.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = Icons.Filled.Timer,
                                     contentDescription = null,
-                                    tint = PurplePrimary,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -181,14 +184,14 @@ fun TimeclockAppScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "Jokarz Timeclock",
-                                fontSize = 16.sp,
+                                text = "Timeclock",
+                                fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Randall Engineering",
-                                fontSize = 10.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -196,56 +199,47 @@ fun TimeclockAppScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
-                        showAnalyticsDialog = true
-                    }) {
-                        Icon(Icons.Filled.BarChart, contentDescription = "Analytics", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconButton(onClick = {
-                        viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
-                        showSettingsDialog = true
-                    }) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    FilledTonalIconButton(
+                        onClick = {
+                            viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
+                            showAnalyticsDialog = true
+                        },
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.BarChart,
+                            contentDescription = "Analytics",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
 
-                    // Gross / Take Home Toggle
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.padding(end = 8.dp)
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    FilledTonalIconButton(
+                        onClick = {
+                            viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
+                            showSettingsDialog = true
+                        },
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        modifier = Modifier.size(38.dp)
                     ) {
-                        Row(modifier = Modifier.padding(2.dp)) {
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (state.displayMode == PayMode.GROSS) PurplePrimary else Color.Transparent,
-                                modifier = Modifier.clickable { viewModel.setMode(PayMode.GROSS) }
-                            ) {
-                                Text(
-                                    text = "Gross",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (state.displayMode == PayMode.GROSS) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (state.displayMode == PayMode.NET) PurplePrimary else Color.Transparent,
-                                modifier = Modifier.clickable { viewModel.setMode(PayMode.NET) }
-                            ) {
-                                Text(
-                                    text = "Take Home",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (state.displayMode == PayMode.NET) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = "Settings",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
+
+                    Spacer(modifier = Modifier.width(8.dp))
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
@@ -255,92 +249,74 @@ fun TimeclockAppScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 14.dp)
+                .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Quick Actions Bar + Rate Input
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Google Material 3 Segmented Rate Switcher & Input Capsule
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                tonalElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.clickable {
-                            viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
-                            showAddShiftDialog = true
-                        }
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            Icon(Icons.Filled.AddCircle, contentDescription = null, tint = PurplePrimary, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Add Shift", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.clickable {
-                            viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
-                            showPtoDialog = true
-                        }
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            Icon(Icons.Filled.EventAvailable, contentDescription = null, tint = EmeraldSuccess, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("PTO / Hol", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.clickable {
-                            viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
-                            showReportDialog = true
-                        }
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            Icon(Icons.Filled.Summarize, contentDescription = null, tint = AmberWarning, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Report", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-
-                // Rate Input field
-                val currentRate = if (state.displayMode == PayMode.GROSS) state.grossRate else state.netRate
-                var rateText by remember(currentRate) { mutableStateOf<String>(String.format(Locale.US, "%.1f", currentRate)) }
-
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
+                    // Gross vs Take Home Switcher
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 2.dp
+                    ) {
+                        Row(modifier = Modifier.padding(3.dp)) {
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (state.displayMode == PayMode.GROSS) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                modifier = Modifier.clickable { viewModel.setMode(PayMode.GROSS) }
+                            ) {
+                                Text(
+                                    text = "Gross",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (state.displayMode == PayMode.GROSS) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (state.displayMode == PayMode.NET) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                modifier = Modifier.clickable { viewModel.setMode(PayMode.NET) }
+                            ) {
+                                Text(
+                                    text = "Take Home",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (state.displayMode == PayMode.NET) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // Editable Rate
+                    val currentRate = if (state.displayMode == PayMode.GROSS) state.grossRate else state.netRate
+                    var rateText by remember(currentRate) { mutableStateOf<String>(String.format(Locale.US, "%.1f", currentRate)) }
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        modifier = Modifier.padding(end = 4.dp)
                     ) {
-                        Text(
-                            text = if (state.displayMode == PayMode.GROSS) "Gross " else "Net ",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        Icon(
+                            imageVector = Icons.Filled.AttachMoney,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
                         )
-                        Icon(Icons.Filled.AttachMoney, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(12.dp))
                         BasicTextField(
                             value = rateText,
                             onValueChange = { newText: String ->
@@ -350,66 +326,130 @@ fun TimeclockAppScreen(
                                 }
                             },
                             textStyle = TextStyle(
-                                fontSize = 12.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             ),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            cursorBrush = SolidColor(PurplePrimary),
-                            modifier = Modifier.width(42.dp)
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.width(48.dp)
                         )
-                        Text("/hr", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            text = "/hr",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Main Clock In / Out Card
-            ElevatedCard(
-                shape = RoundedCornerShape(28.dp),
+            // Google Clock Hero Widget with Live Real-Time Ticking
+            GoogleClockHero(
+                state = state,
+                currentTickMs = currentTick,
+                onClockToggle = {
+                    viewModel.toggleClock()
+                    if (!state.isClockedIn) {
+                        showUndoSnackbar("Clocked In successfully.")
+                    } else {
+                        showUndoSnackbar("Clocked Out successfully.")
+                    }
+                },
+                onBreakToggle = { viewModel.toggleBreak() },
+                onEditStartClick = { showEditActiveDialog = true }
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Google Assist Action Chips
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 20.dp, horizontal = 16.dp)
-                ) {
-                    ClockButton(
-                        isClockedIn = state.isClockedIn,
-                        onClick = {
-                            viewModel.toggleClock()
-                            if (!state.isClockedIn) {
-                                showUndoSnackbar("Clocked In successfully.")
-                            } else {
-                                showUndoSnackbar("Clocked Out successfully.")
-                            }
-                        }
-                    )
+                AssistChip(
+                    onClick = {
+                        viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
+                        showAddShiftDialog = true
+                    },
+                    label = { Text("Add Shift", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                    ),
+                    border = null,
+                    modifier = Modifier.weight(1f)
+                )
 
-                    LiveStatsDrawer(
-                        state = state,
-                        onEditStartClick = { showEditActiveDialog = true },
-                        onBreakToggle = { viewModel.toggleBreak() }
-                    )
-                }
+                AssistChip(
+                    onClick = {
+                        viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
+                        showPtoDialog = true
+                    },
+                    label = { Text("PTO / Hol", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.CalendarMonth,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = EmeraldSuccess
+                        )
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                    ),
+                    border = null,
+                    modifier = Modifier.weight(1f)
+                )
+
+                AssistChip(
+                    onClick = {
+                        viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
+                        showReportDialog = true
+                    },
+                    label = { Text("Report", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Description,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                    ),
+                    border = null,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Summary Cards (Today & Pay Period)
-            SummaryCards(totals = totals)
+            // Google-styled Today & Pay Period Summary Cards
+            GoogleSummaryCards(totals = totals)
 
             Spacer(modifier = Modifier.height(14.dp))
 
             // Weekly Swiper
-            WeeklySwiper(state = state)
+            GoogleWeeklySwiper(state = state)
 
             Spacer(modifier = Modifier.height(14.dp))
 
             // Session History Log
-            SessionLogList(
+            GoogleSessionLogList(
                 sessions = state.sessions,
                 onSessionClick = { idx, s ->
                     selectedSessionForEdit = Pair(idx, s)
@@ -417,7 +457,7 @@ fun TimeclockAppScreen(
                 modifier = Modifier.height(280.dp)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 

@@ -14,12 +14,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Notes
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -36,7 +36,7 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun SessionLogList(
+fun GoogleSessionLogList(
     sessions: List<Session>,
     onSessionClick: (index: Int, session: Session) -> Unit,
     modifier: Modifier = Modifier
@@ -45,19 +45,21 @@ fun SessionLogList(
 
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "RECENT COMPLETED SHIFTS",
+            text = "SHIFT HISTORY",
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            letterSpacing = 1.sp,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
         )
 
         if (sortedSessions.isEmpty()) {
-            ElevatedCard(
-                shape = RoundedCornerShape(20.dp),
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = 4.dp)
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -68,16 +70,15 @@ fun SessionLogList(
                     Icon(
                         imageVector = Icons.Filled.History,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                         modifier = Modifier.size(36.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "NO COMPLETED SESSIONS YET",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        letterSpacing = 1.sp
+                        text = "No completed shifts yet",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -95,8 +96,10 @@ fun SessionLogList(
                     val durMs = session.end - session.start
                     val durStr = PayrollEngine.formatDurationShort(durMs)
 
-                    ElevatedCard(
-                        shape = RoundedCornerShape(16.dp),
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                        tonalElevation = 1.dp,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onSessionClick(originalIndex, session) }
@@ -106,7 +109,7 @@ fun SessionLogList(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(14.dp)
+                                .padding(16.dp)
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
@@ -122,10 +125,10 @@ fun SessionLogList(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 if (session.note.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Spacer(modifier = Modifier.height(3.dp))
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
-                                            imageVector = Icons.Filled.Notes,
+                                            imageVector = Icons.AutoMirrored.Filled.Notes,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(12.dp)
@@ -133,7 +136,7 @@ fun SessionLogList(
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
                                             text = session.note,
-                                            fontSize = 10.sp,
+                                            fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1
                                         )
@@ -143,11 +146,11 @@ fun SessionLogList(
 
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
-                                    text = "$durStr Tech",
-                                    fontSize = 13.sp,
+                                    text = durStr,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.Monospace,
-                                    color = PurpleAccent
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -156,15 +159,15 @@ fun SessionLogList(
                                     Icon(
                                         imageVector = Icons.Filled.Edit,
                                         contentDescription = "Edit",
-                                        tint = PurpleAccent,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(12.dp)
                                     )
                                     Spacer(modifier = Modifier.width(2.dp))
                                     Text(
-                                        text = "EDIT",
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        text = "Edit",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }

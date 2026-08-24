@@ -190,7 +190,8 @@ object PayrollEngine {
         val isMonThu = dayOfWeek in Calendar.MONDAY..Calendar.THURSDAY
         if (isMonThu) {
             baseHours = standardSalaryHours
-            val targetStandardShift = standardSalaryHours + unpaidMealDuration
+            val mealDeduction = if (settings.autoBreakDeduction) unpaidMealDuration else 0.0
+            val targetStandardShift = standardSalaryHours + mealDeduction
 
             if (clockedHours >= cliffHours) {
                 otHours = clockedHours - targetStandardShift

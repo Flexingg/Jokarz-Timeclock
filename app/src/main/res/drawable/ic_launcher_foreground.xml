@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Top Crown Button -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M50,23 h8 v4 h-8 z" />
+    <path
+        android:fillColor="#D0BCFF"
+        android:pathData="M48,20 h12 v3 h-12 z" />
+
+    <!-- Top-Right Lap Button -->
+    <path
+        android:fillColor="#D0BCFF"
+        android:pathData="M73.5,29.5 L77.5,33.5 L75.5,35.5 L71.5,31.5 Z" />
+
+    <!-- Top-Left Lap Button -->
+    <path
+        android:fillColor="#D0BCFF"
+        android:pathData="M34.5,29.5 L36.5,31.5 L32.5,35.5 L30.5,33.5 Z" />
+
+    <!-- Main Outer Stopwatch Ring -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.5"
+        android:fillColor="#00000000"
+        android:pathData="M54,30 C69.464,30 82,42.536 82,58 C82,73.464 69.464,86 54,86 C38.536,86 26,73.464 26,58 C26,42.536 38.536,30 54,30 Z" />
+
+    <!-- Inner Radial Fill -->
+    <path
+        android:fillColor="#381E72"
+        android:pathData="M54,34 C67.255,34 78,44.745 78,58 C78,71.255 67.255,82 54,82 C40.745,82 30,71.255 30,58 C30,44.745 40.745,34 54,34 Z" />
+
+    <!-- Active Arc Accent -->
+    <path
+        android:strokeColor="#A8C7FA"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M54,30 A28,28 0 0,1 82,58" />
+
+    <!-- Center Pivot Pin -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,55 C55.657,55 57,56.343 57,58 C57,59.657 55.657,61 54,61 C52.343,61 51,59.657 51,58 C51,56.343 52.343,55 54,55 Z" />
+
+    <!-- Stopwatch Hand (pointing to 2 o'clock / active timing) -->
+    <path
+        android:strokeColor="#E8DEF8"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M54,58 L68,44" />
+
+    <!-- Tick Marks -->
+    <path
+        android:fillColor="#CCC2DC"
+        android:pathData="M53.25,36 h1.5 v4 h-1.5 z" />
+    <path
+        android:fillColor="#CCC2DC"
+        android:pathData="M53.25,76 h1.5 v4 h-1.5 z" />
+    <path
+        android:fillColor="#CCC2DC"
+        android:pathData="M72,57.25 v1.5 h4 v-1.5 z" />
+    <path
+        android:fillColor="#CCC2DC"
+        android:pathData="M32,57.25 v1.5 h4 v-1.5 z" />
+</vector>

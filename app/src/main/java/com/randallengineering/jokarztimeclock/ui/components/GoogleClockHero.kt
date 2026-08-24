@@ -78,7 +78,8 @@ fun GoogleClockHero(
     val elapsedMs = if (isClockedIn) max(0L, currentTickMs - startMs) else 0L
 
     val settings = state.settings
-    val standardTargetMs = ((settings.standardShiftHours + settings.unpaidMealDuration) * 3600000.0).toLong()
+    val mealToAdd = if (settings.autoBreakDeduction) settings.unpaidMealDuration else 0.0
+    val standardTargetMs = ((settings.standardShiftHours + mealToAdd) * 3600000.0).toLong()
     val cliffTargetMs = (settings.cliffHours * 3600000.0).toLong()
 
     // Circular progress animation (0.0 to 1.0)
@@ -218,7 +219,8 @@ fun GoogleClockHero(
                             )
                         } else if (isMonThu) {
                             val prevBanked = PayrollEngine.getPreviousBankedHoursForCurrentWeek(startMs, state)
-                            val targetStandardHrs = (settings.standardShiftHours + settings.unpaidMealDuration) - prevBanked
+                            val mealBreakToAdd = if (settings.autoBreakDeduction) settings.unpaidMealDuration else 0.0
+                            val targetStandardHrs = (settings.standardShiftHours + mealBreakToAdd) - prevBanked
                             val standardMs = (targetStandardHrs * 3600000.0).toLong()
 
                             if (elapsedMs < standardMs) {

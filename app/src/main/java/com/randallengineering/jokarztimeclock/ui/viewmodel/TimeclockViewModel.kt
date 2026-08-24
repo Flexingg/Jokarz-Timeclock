@@ -81,7 +81,8 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
 
         if (isMonThu) {
             val prevBanked = PayrollEngine.getPreviousBankedHoursForCurrentWeek(s.currentSessionStart, s)
-            val targetStandardHrs = (s.settings.standardShiftHours + s.settings.unpaidMealDuration) - prevBanked
+            val mealBreakToAdd = if (s.settings.autoBreakDeduction) s.settings.unpaidMealDuration else 0.0
+            val targetStandardHrs = (s.settings.standardShiftHours + mealBreakToAdd) - prevBanked
             val standardMs = (targetStandardHrs * 3600000.0).toLong()
             val cliffMs = (s.settings.cliffHours * 3600000.0).toLong()
 

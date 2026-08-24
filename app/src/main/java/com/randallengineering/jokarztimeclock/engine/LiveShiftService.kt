@@ -126,7 +126,8 @@ class LiveShiftService : Service() {
         val startMs = state.currentSessionStart ?: currentTickMs
         val elapsedMs = max(0L, currentTickMs - startMs)
         val settings = state.settings
-        val standardTargetMs = ((settings.standardShiftHours + settings.unpaidMealDuration) * 3600000.0).toLong()
+        val mealBreakToAdd = if (settings.autoBreakDeduction) settings.unpaidMealDuration else 0.0
+        val standardTargetMs = ((settings.standardShiftHours + mealBreakToAdd) * 3600000.0).toLong()
         val cliffTargetMs = (settings.cliffHours * 3600000.0).toLong()
 
         val cal = Calendar.getInstance().apply { timeInMillis = startMs }
@@ -137,7 +138,7 @@ class LiveShiftService : Service() {
             "On Break / Lunch • ${PayrollEngine.formatDuration(breakElapsed)}"
         } else if (isMonThu) {
             val prevBanked = PayrollEngine.getPreviousBankedHoursForCurrentWeek(startMs, state)
-            val targetStandardHrs = (settings.standardShiftHours + settings.unpaidMealDuration) - prevBanked
+            val targetStandardHrs = (settings.standardShiftHours + mealBreakToAdd) - prevBanked
             val standardMs = (targetStandardHrs * 3600000.0).toLong()
 
             if (elapsedMs < standardMs) {

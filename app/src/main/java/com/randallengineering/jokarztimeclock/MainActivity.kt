@@ -84,6 +84,14 @@ import com.randallengineering.jokarztimeclock.ui.theme.PurplePrimary
 import com.randallengineering.jokarztimeclock.ui.viewmodel.TimeclockViewModel
 import kotlinx.coroutines.launch
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
+import androidx.core.content.ContextCompat
+
 class MainActivity : ComponentActivity() {
 
     private val viewModel: TimeclockViewModel by viewModels()
@@ -96,6 +104,21 @@ class MainActivity : ComponentActivity() {
             val state by viewModel.state.collectAsState()
             val totals by viewModel.totals.collectAsState()
             val currentTick by viewModel.tick.collectAsState()
+
+            val permissionLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestMultiplePermissions()
+            ) { /* Permissions handled */ }
+
+            LaunchedEffect(Unit) {
+                val permissions = mutableListOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                permissionLauncher.launch(permissions.toTypedArray())
+            }
 
             JokarzTimeclockTheme(themeMode = state.settings.theme) {
                 GoogleTimeclockScreen(

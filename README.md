@@ -1,11 +1,11 @@
 # ⏱️ Jokarz Timeclock (Native Jetpack Compose & Material You)
 
-[![Release](https://img.shields.io/badge/Release-v2.1.0-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.1.0)
+[![Release](https://img.shields.io/badge/Release-v2.2.0-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.2.0)
 [![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/Jokarz-Timeclock.apk)
 [![Platform](https://img.shields.io/badge/Platform-Native%20Android%20Compose-blue.svg)](https://developer.android.com/jetpack/compose)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Jokarz Timeclock** is a 100% **Native Android Application** built with **Kotlin, Jetpack Compose, and Material You (Material 3 Expressive)** for **Randall Engineering**. It features real-time dynamic ticking, Google Clock-style circular progress visualizations, precision salary banking calculations, strict overtime cliff triggers, weekend overtime tracking, dynamic system wallpaper theming, animated action controls, procedural audio/haptics, Tasker integration, and full offline local persistence.
+**Jokarz Timeclock** is a 100% **Native Android Application** built with **Kotlin, Jetpack Compose, and Material You (Material 3 Expressive)** for **Randall Engineering**. It features live ongoing Android notifications, Google Maps geofencing for automated clock-in/out, native Material 3 clock-face time pickers, real-time dynamic ticking, precision salary banking calculations, strict overtime cliff triggers, weekend overtime tracking, dynamic system wallpaper theming, procedural audio/haptics, and Tasker integration.
 
 ---
 
@@ -13,7 +13,7 @@
 
 Get the ready-to-install Android APK directly from the latest release:
 
-📥 **[Download Jokarz-Timeclock.apk (v2.1.0 - Google Material You Design)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/Jokarz-Timeclock.apk)**
+📥 **[Download Jokarz-Timeclock.apk (v2.2.0 - Live Notifications & Google Maps Geofence)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/Jokarz-Timeclock.apk)**
 
 > **Installation**: Download the `.apk` file to your Android phone and tap to install (enable *"Install Unknown Apps"* in settings if prompted).
 

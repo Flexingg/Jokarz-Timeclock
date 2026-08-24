@@ -11,6 +11,7 @@ import com.randallengineering.jokarztimeclock.data.models.Session
 import com.randallengineering.jokarztimeclock.data.models.TimeclockState
 import com.randallengineering.jokarztimeclock.data.repository.TimeclockRepository
 import com.randallengineering.jokarztimeclock.engine.AudioHapticEngine
+import com.randallengineering.jokarztimeclock.engine.GeofenceManager
 import com.randallengineering.jokarztimeclock.engine.NotificationHelper
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
 import com.randallengineering.jokarztimeclock.engine.TaskerBridge
@@ -31,8 +32,9 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
     val state: StateFlow<TimeclockState> = repository.state
 
     val audioHaptic = AudioHapticEngine(application)
-    private val notificationHelper = NotificationHelper(application)
-    private val taskerBridge = TaskerBridge(application)
+    val notificationHelper = NotificationHelper(application)
+    val taskerBridge = TaskerBridge(application)
+    val geofenceManager = GeofenceManager(application)
 
     // Tick counter for live timer updates
     private val _tick = MutableStateFlow(System.currentTimeMillis())
@@ -50,25 +52,30 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
     private var cliffNotified = false
 
     init {
+        // Register initial geofence if configured
+        geofenceManager.updateGeofence(state.value.settings)
+
         // 1-second live tick loop
         viewModelScope.launch {
             while (isActive) {
-                _tick.value = System.currentTimeMillis()
-                checkMilestones()
+                val now = System.currentTimeMillis()
+                _tick.value = now
+                val s = state.value
+                checkMilestones(s, now)
+                notificationHelper.showOrUpdateLiveShiftNotification(s, now)
                 delay(1000L)
             }
         }
     }
 
-    private fun checkMilestones() {
-        val s = state.value
+    private fun checkMilestones(s: TimeclockState, now: Long) {
         if (!s.isClockedIn || s.currentSessionStart == null || !s.settings.notificationsEnabled) {
             standardNotified = false
             cliffNotified = false
             return
         }
 
-        val elapsedMs = System.currentTimeMillis() - s.currentSessionStart
+        val elapsedMs = now - s.currentSessionStart
         val cal = Calendar.getInstance().apply { timeInMillis = s.currentSessionStart }
         val isMonThu = cal.get(Calendar.DAY_OF_WEEK) in Calendar.MONDAY..Calendar.THURSDAY
 
@@ -97,6 +104,7 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
         if (s.isClockedIn) {
             audioHaptic.playClockOutSound(s.settings.soundEnabled)
             repository.clockOut()
+            notificationHelper.clearLiveNotification()
             taskerBridge.sendEvent("Clocked Out")
         } else {
             audioHaptic.playClockInSound(s.settings.soundEnabled)
@@ -123,6 +131,7 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun updateSettings(settings: AppSettings) {
         repository.updateSettings(settings)
+        geofenceManager.updateGeofence(settings)
     }
 
     fun updateActiveStartTime(startMs: Long) {
@@ -160,6 +169,7 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun clearAllData() {
         repository.clearAllData()
+        notificationHelper.clearLiveNotification()
         pushTaskerData()
     }
 

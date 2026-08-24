@@ -29,7 +29,13 @@ data class AppSettings(
     val soundEnabled: Boolean = true,
     val hapticEnabled: Boolean = true,
     val notificationsEnabled: Boolean = true,
-    val autoBreakDeduction: Boolean = true
+    val liveNotificationEnabled: Boolean = true,
+    val autoBreakDeduction: Boolean = true,
+    val geofenceEnabled: Boolean = false,
+    val workLatitude: Double = 0.0,
+    val workLongitude: Double = 0.0,
+    val geofenceRadiusMeters: Float = 150f,
+    val workAddressName: String = ""
 )
 
 data class AuditEntry(

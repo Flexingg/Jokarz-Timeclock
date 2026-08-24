@@ -244,8 +244,9 @@ fun GoogleClockHero(
                             } else {
                                 val otHours = (elapsedMs - standardTargetMs) / 3600000.0
                                 val otPay = otHours * rate * settings.otMultiplier
+                                val moneyStr = if (settings.hideMoneyAmounts) "" else " • ${PayrollEngine.formatMoney(otPay)}"
                                 Text(
-                                    text = "Overtime (${settings.otMultiplier}x): ${String.format("%.2f", otHours)}h • ${PayrollEngine.formatMoney(otPay)}",
+                                    text = "Overtime (${settings.otMultiplier}x): ${String.format("%.2f", otHours)}h$moneyStr",
                                     color = PurpleAccent,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold
@@ -255,8 +256,9 @@ fun GoogleClockHero(
                             val elapsedHrs = elapsedMs / 3600000.0
                             val payableHours = if (elapsedHrs > 4.0) elapsedHrs - 0.5 else elapsedHrs
                             val pay = maxOf(0.0, payableHours * rate * settings.otMultiplier)
+                            val moneyStr = if (settings.hideMoneyAmounts) "" else " • ${PayrollEngine.formatMoney(pay)}"
                             Text(
-                                text = "Weekend OT: ${String.format("%.2f", payableHours)}h • ${PayrollEngine.formatMoney(pay)}",
+                                text = "Weekend OT: ${String.format("%.2f", payableHours)}h$moneyStr",
                                 color = PurpleAccent,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold

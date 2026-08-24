@@ -669,6 +669,7 @@ fun SettingsDialog(
     var hapticEnabled by remember { mutableStateOf(currentSettings.hapticEnabled) }
     var notificationsEnabled by remember { mutableStateOf(currentSettings.notificationsEnabled) }
     var liveNotificationEnabled by remember { mutableStateOf(currentSettings.liveNotificationEnabled) }
+    var hideMoneyAmounts by remember { mutableStateOf(currentSettings.hideMoneyAmounts) }
     var autoBreak by remember { mutableStateOf(currentSettings.autoBreakDeduction) }
 
     // Geofencing Settings
@@ -833,6 +834,10 @@ fun SettingsDialog(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Text("Privacy Mode (Hide Dollar Amounts)", fontSize = 12.sp)
+                    Checkbox(checked = hideMoneyAmounts, onCheckedChange = { hideMoneyAmounts = it })
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text("Live Ongoing Notification (Android Bar)", fontSize = 12.sp)
                     Checkbox(checked = liveNotificationEnabled, onCheckedChange = { liveNotificationEnabled = it })
                 }
@@ -868,6 +873,7 @@ fun SettingsDialog(
                             hapticEnabled = hapticEnabled,
                             notificationsEnabled = notificationsEnabled,
                             liveNotificationEnabled = liveNotificationEnabled,
+                            hideMoneyAmounts = hideMoneyAmounts,
                             autoBreakDeduction = autoBreak,
                             geofenceEnabled = geofenceEnabled,
                             workLatitude = workLat,

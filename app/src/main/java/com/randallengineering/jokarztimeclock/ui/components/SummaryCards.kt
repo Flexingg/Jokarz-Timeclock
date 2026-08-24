@@ -29,6 +29,7 @@ import java.util.Calendar
 @Composable
 fun GoogleSummaryCards(
     totals: PeriodTotals,
+    hideMoney: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val todayStats = totals.todayStats
@@ -78,7 +79,7 @@ fun GoogleSummaryCards(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = PayrollEngine.formatMoney(totals.todayEarnings),
+                    text = PayrollEngine.formatMoney(totals.todayEarnings, hide = hideMoney),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = EmeraldSuccess
@@ -86,7 +87,7 @@ fun GoogleSummaryCards(
 
                 if (totals.todayOtEarnings > 0.0) {
                     Text(
-                        text = "+${PayrollEngine.formatMoney(totals.todayOtEarnings)} Overtime",
+                        text = "+${PayrollEngine.formatMoney(totals.todayOtEarnings, hide = hideMoney)} Overtime",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = PurpleAccent
@@ -170,7 +171,7 @@ fun GoogleSummaryCards(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = PayrollEngine.formatMoney(totals.periodEarnings),
+                    text = PayrollEngine.formatMoney(totals.periodEarnings, hide = hideMoney),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = EmeraldSuccess

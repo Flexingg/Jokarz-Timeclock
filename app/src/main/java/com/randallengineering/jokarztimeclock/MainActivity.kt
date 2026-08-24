@@ -32,6 +32,8 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -222,6 +224,27 @@ fun GoogleTimeclockScreen(
                     }
                 },
                 actions = {
+                    FilledTonalIconButton(
+                        onClick = {
+                            val newHide = !state.settings.hideMoneyAmounts
+                            viewModel.updateSettings(state.settings.copy(hideMoneyAmounts = newHide))
+                            viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
+                        },
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (state.settings.hideMoneyAmounts) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            contentDescription = "Toggle Money Visibility",
+                            tint = if (state.settings.hideMoneyAmounts) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
                     FilledTonalIconButton(
                         onClick = {
                             viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
@@ -462,7 +485,7 @@ fun GoogleTimeclockScreen(
             Spacer(modifier = Modifier.height(14.dp))
 
             // Google-styled Today & Pay Period Summary Cards
-            GoogleSummaryCards(totals = totals)
+            GoogleSummaryCards(totals = totals, hideMoney = state.settings.hideMoneyAmounts)
 
             Spacer(modifier = Modifier.height(14.dp))
 

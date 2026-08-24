@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:allowBackup="true"
@@ -34,6 +36,15 @@
                 <data android:scheme="jokarz" android:host="timeclock" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".engine.LiveShiftService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Live ongoing shift tracking, chronometer and milestone monitoring" />
+        </service>
 
         <receiver
             android:name=".engine.GeofenceBroadcastReceiver"

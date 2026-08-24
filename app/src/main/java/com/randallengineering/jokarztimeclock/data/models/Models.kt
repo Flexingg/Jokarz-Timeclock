@@ -30,6 +30,7 @@ data class AppSettings(
     val hapticEnabled: Boolean = true,
     val notificationsEnabled: Boolean = true,
     val liveNotificationEnabled: Boolean = true,
+    val hideMoneyAmounts: Boolean = false,
     val autoBreakDeduction: Boolean = true,
     val geofenceEnabled: Boolean = false,
     val workLatitude: Double = 0.0,

@@ -317,7 +317,8 @@ object PayrollEngine {
         return "${hours}h ${mins}m"
     }
 
-    fun formatMoney(amount: Double): String {
+    fun formatMoney(amount: Double, hide: Boolean = false): String {
+        if (hide) return "$ ••••••"
         val format = NumberFormat.getCurrencyInstance(Locale.US)
         return format.format(max(0.0, amount))
     }

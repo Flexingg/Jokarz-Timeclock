@@ -6,7 +6,6 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
-import android.view.WindowManager;
 
 public class MainActivity extends Activity {
     private WebView webView;
@@ -24,13 +23,14 @@ public class MainActivity extends Activity {
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
+        settings.setAllowFileAccessFromFileURLs(true);
+        settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
 
         webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(new WebChromeClient());
 
-        // Check if launched with intent URL action (e.g. ?action=clock_in)
-        String url = "file:///android_asset/www/index.html";
+        String url = "file:///android_asset/index.html";
         if (getIntent() != null && getIntent().getData() != null) {
             String query = getIntent().getData().getQuery();
             if (query != null && !query.isEmpty()) {

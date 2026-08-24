@@ -8,7 +8,7 @@ const ANDROID_JAR = path.join(SDK_DIR, 'platforms/android-34/android.jar');
 const PROJECT_DIR = 'C:/RandallEngineering/Jokarz-Timeclock';
 const ANDROID_DIR = path.join(PROJECT_DIR, 'android-build');
 
-console.log('=== BUILDING JOKARZ TIMECLOCK ANDROID APK ===');
+console.log('=== BUILDING FULLY SELF-CONTAINED JOKARZ TIMECLOCK APK ===');
 
 // 1. Prepare directory structure
 const dirs = [
@@ -16,9 +16,9 @@ const dirs = [
     path.join(ANDROID_DIR, 'src/com/randallengineering/jokarztimeclock'),
     path.join(ANDROID_DIR, 'res/values'),
     path.join(ANDROID_DIR, 'res/mipmap-hdpi'),
-    path.join(ANDROID_DIR, 'assets/www/css'),
-    path.join(ANDROID_DIR, 'assets/www/js'),
-    path.join(ANDROID_DIR, 'assets/www/icons'),
+    path.join(ANDROID_DIR, 'assets/css'),
+    path.join(ANDROID_DIR, 'assets/js'),
+    path.join(ANDROID_DIR, 'assets/icons'),
     path.join(ANDROID_DIR, 'bin'),
     path.join(ANDROID_DIR, 'dex')
 ];
@@ -27,20 +27,22 @@ dirs.forEach(d => {
     if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
 });
 
-// 2. Copy Web Assets to assets/www
+// 2. Copy Web Assets to assets/
 const filesToCopy = [
-    { src: path.join(PROJECT_DIR, 'index.html'), dest: path.join(ANDROID_DIR, 'assets/www/index.html') },
-    { src: path.join(PROJECT_DIR, 'manifest.json'), dest: path.join(ANDROID_DIR, 'assets/www/manifest.json') },
-    { src: path.join(PROJECT_DIR, 'css/styles.css'), dest: path.join(ANDROID_DIR, 'assets/www/css/styles.css') },
-    { src: path.join(PROJECT_DIR, 'icons/icon-192.png'), dest: path.join(ANDROID_DIR, 'assets/www/icons/icon-192.png') },
-    { src: path.join(PROJECT_DIR, 'icons/icon-512.png'), dest: path.join(ANDROID_DIR, 'assets/www/icons/icon-512.png') }
+    { src: path.join(PROJECT_DIR, 'index.html'), dest: path.join(ANDROID_DIR, 'assets/index.html') },
+    { src: path.join(PROJECT_DIR, 'manifest.json'), dest: path.join(ANDROID_DIR, 'assets/manifest.json') },
+    { src: path.join(PROJECT_DIR, 'css/styles.css'), dest: path.join(ANDROID_DIR, 'assets/css/styles.css') },
+    { src: path.join(PROJECT_DIR, 'css/tailwind.min.js'), dest: path.join(ANDROID_DIR, 'assets/css/tailwind.min.js') },
+    { src: path.join(PROJECT_DIR, 'css/material-icons.woff2'), dest: path.join(ANDROID_DIR, 'assets/css/material-icons.woff2') },
+    { src: path.join(PROJECT_DIR, 'icons/icon-192.png'), dest: path.join(ANDROID_DIR, 'assets/icons/icon-192.png') },
+    { src: path.join(PROJECT_DIR, 'icons/icon-512.png'), dest: path.join(ANDROID_DIR, 'assets/icons/icon-512.png') }
 ];
 
 const jsFiles = fs.readdirSync(path.join(PROJECT_DIR, 'js'));
 jsFiles.forEach(file => {
     filesToCopy.push({
         src: path.join(PROJECT_DIR, 'js', file),
-        dest: path.join(ANDROID_DIR, 'assets/www/js', file)
+        dest: path.join(ANDROID_DIR, 'assets/js', file)
     });
 });
 
@@ -55,8 +57,8 @@ fs.copyFileSync(path.join(PROJECT_DIR, 'icons/icon-192.png'), path.join(ANDROID_
 const manifestXml = `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.randallengineering.jokarztimeclock"
-    android:versionCode="1"
-    android:versionName="1.0.0">
+    android:versionCode="2"
+    android:versionName="1.0.1">
 
     <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
 
@@ -81,7 +83,6 @@ const manifestXml = `<?xml version="1.0" encoding="utf-8"?>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Intent URL filters for Tasker shortcuts -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -109,7 +110,6 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
-import android.view.WindowManager;
 
 public class MainActivity extends Activity {
     private WebView webView;
@@ -127,13 +127,14 @@ public class MainActivity extends Activity {
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
+        settings.setAllowFileAccessFromFileURLs(true);
+        settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
 
         webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(new WebChromeClient());
 
-        // Check if launched with intent URL action (e.g. ?action=clock_in)
-        String url = "file:///android_asset/www/index.html";
+        String url = "file:///android_asset/index.html";
         if (getIntent() != null && getIntent().getData() != null) {
             String query = getIntent().getData().getQuery();
             if (query != null && !query.isEmpty()) {
@@ -168,11 +169,11 @@ try {
     console.log('Compiling resources...');
     execSync(`${AAPT2} compile --dir "${path.join(ANDROID_DIR, 'res')}" -o "${path.join(ANDROID_DIR, 'compiled_res.zip')}"`, { stdio: 'inherit' });
 
-    // Step B: aapt2 link
-    console.log('Linking APK...');
-    execSync(`${AAPT2} link -I "${ANDROID_JAR}" --manifest "${path.join(ANDROID_DIR, 'AndroidManifest.xml')}" -A "${path.join(ANDROID_DIR, 'assets')}" -o "${path.join(ANDROID_DIR, 'base.apk')}" "${path.join(ANDROID_DIR, 'compiled_res.zip')}" --auto-add-overlay --java "${path.join(ANDROID_DIR, 'src')}"`, { stdio: 'inherit' });
+    // Step B: aapt2 link without -A (we will pack assets directly to ensure clean forward-slash POSIX paths)
+    console.log('Linking base APK...');
+    execSync(`${AAPT2} link -I "${ANDROID_JAR}" --manifest "${path.join(ANDROID_DIR, 'AndroidManifest.xml')}" -o "${path.join(ANDROID_DIR, 'base.apk')}" "${path.join(ANDROID_DIR, 'compiled_res.zip')}" --auto-add-overlay --java "${path.join(ANDROID_DIR, 'src')}"`, { stdio: 'inherit' });
 
-    // Step C: javac compile with Java 17/8 compatibility for d8
+    // Step C: javac compile
     console.log('Compiling Java classes...');
     const javaFiles = [
         path.join(ANDROID_DIR, 'src/com/randallengineering/jokarztimeclock/MainActivity.java'),
@@ -182,27 +183,33 @@ try {
 
     // Step D: d8 dex compilation
     console.log('Compiling DEX bytecode...');
-    const classFiles = [
-        path.join(ANDROID_DIR, 'bin/com/randallengineering/jokarztimeclock/MainActivity.class'),
-        path.join(ANDROID_DIR, 'bin/com/randallengineering/jokarztimeclock/R.class')
-    ];
-    // Include any inner classes if present
     const binDir = path.join(ANDROID_DIR, 'bin/com/randallengineering/jokarztimeclock');
     const allClasses = fs.readdirSync(binDir).filter(f => f.endsWith('.class')).map(f => `"${path.join(binDir, f)}"`).join(' ');
-
     execSync(`${D8} --lib "${ANDROID_JAR}" --output "${path.join(ANDROID_DIR, 'dex')}" ${allClasses}`, { stdio: 'inherit' });
 
     // Step E: Insert classes.dex into base.apk
-    console.log('Adding classes.dex to APK...');
+    console.log('Adding classes.dex and assets to APK...');
+    const baseApkPath = path.join(ANDROID_DIR, 'base.apk');
+    
+    // Add classes.dex
     process.chdir(path.join(ANDROID_DIR, 'dex'));
-    execSync(`jar uf "${path.join(ANDROID_DIR, 'base.apk')}" classes.dex`, { stdio: 'inherit' });
+    execSync(`jar uf "${baseApkPath}" classes.dex`, { stdio: 'inherit' });
+
+    // Add assets/ directory with pure POSIX forward slashes
+    process.chdir(ANDROID_DIR);
+    execSync(`jar uf "${baseApkPath}" assets/index.html assets/manifest.json assets/css/styles.css assets/css/tailwind.min.js assets/css/material-icons.woff2 assets/icons/icon-192.png assets/icons/icon-512.png`, { stdio: 'inherit' });
+    
+    // Add all js files
+    const jsList = fs.readdirSync(path.join(ANDROID_DIR, 'assets/js')).map(f => `assets/js/${f}`).join(' ');
+    execSync(`jar uf "${baseApkPath}" ${jsList}`, { stdio: 'inherit' });
+
     process.chdir(PROJECT_DIR);
 
     // Step F: zipalign
     console.log('Aligning APK...');
     const alignedApk = path.join(ANDROID_DIR, 'aligned.apk');
     if (fs.existsSync(alignedApk)) fs.unlinkSync(alignedApk);
-    execSync(`${ZIPALIGN} -v -p 4 "${path.join(ANDROID_DIR, 'base.apk')}" "${alignedApk}"`, { stdio: 'inherit' });
+    execSync(`${ZIPALIGN} -v -p 4 "${baseApkPath}" "${alignedApk}"`, { stdio: 'inherit' });
 
     // Step G: Generate keystore if not exists
     const keystore = path.join(ANDROID_DIR, 'debug.keystore');
@@ -217,7 +224,7 @@ try {
     if (fs.existsSync(finalApk)) fs.unlinkSync(finalApk);
     execSync(`${APKSIGNER} sign --ks "${keystore}" --ks-pass pass:android --out "${finalApk}" "${alignedApk}"`, { stdio: 'inherit' });
 
-    console.log('\n SUCCESS: APK build complete!');
+    console.log('\n SUCCESS: Self-contained APK build complete!');
     console.log(` Output APK: ${finalApk}`);
     console.log(` File Size: ${(fs.statSync(finalApk).size / 1024).toFixed(1)} KB`);
 

@@ -1,6 +1,6 @@
 # ⏱️ Jokarz Timeclock
 
-[![Release](https://img.shields.io/badge/Release-v1.0.0-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v1.0.0)
+[![Release](https://img.shields.io/badge/Release-v1.0.1-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v1.0.1)
 [![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/Jokarz-Timeclock.apk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -12,7 +12,7 @@
 
 Get the ready-to-install Android APK directly from the latest release:
 
-📥 **[Download Jokarz-Timeclock.apk (v1.0.0)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/Jokarz-Timeclock.apk)**
+📥 **[Download Jokarz-Timeclock.apk (v1.0.1 - Fully Self-Contained)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/Jokarz-Timeclock.apk)**
 
 > To install: Download the `.apk` file to your Android phone and tap to install (enable *"Install Unknown Apps"* in settings if prompted).
 

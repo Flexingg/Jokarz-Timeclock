@@ -1,0 +1,140 @@
+/* Jokarz Timeclock - Material Design 3 Stylesheet */
+
+:root {
+    --md-sys-color-primary: #9333ea;
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-primary-container: #581c87;
+    --md-sys-color-surface: #1e293b;
+    --md-sys-color-surface-dim: #0f172a;
+    --md-sys-color-surface-bright: #334155;
+    --md-sys-color-surface-container: #1e293b;
+    --md-sys-color-outline: #334155;
+    --md-sys-color-error: #f43f5e;
+    --md-sys-color-success: #10b981;
+    --md-sys-color-warning: #f59e0b;
+}
+
+/* Theme variations */
+body.theme-amoled {
+    background-color: #000000 !important;
+}
+body.theme-amoled .md-card {
+    background-color: #0a0a0a;
+    border-color: #262626;
+}
+
+body.theme-emerald {
+    --md-sys-color-primary: #059669;
+}
+body.theme-amber {
+    --md-sys-color-primary: #d97706;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    user-select: none;
+    -webkit-user-select: none;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Scrollbar styling */
+.hide-scroll::-webkit-scrollbar {
+    display: none;
+}
+.hide-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Material Card Surface Elevation */
+.md-card {
+    background-color: rgba(30, 41, 59, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(51, 65, 85, 0.6);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4), 0 2px 6px -1px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s ease;
+}
+
+.md-card:hover {
+    border-color: rgba(147, 51, 234, 0.35);
+}
+
+/* Interactive Button Press Feel */
+.btn-press {
+    transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), filter 0.15s ease, box-shadow 0.2s ease;
+}
+.btn-press:active {
+    transform: scale(0.95);
+    filter: brightness(0.92);
+}
+
+/* Clock In / Out Pulse Ring Animation */
+@keyframes pulse-ring {
+    0% {
+        transform: scale(0.96);
+        box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.75);
+    }
+    70% {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 18px rgba(225, 29, 72, 0);
+    }
+    100% {
+        transform: scale(0.96);
+        box-shadow: 0 0 0 0 rgba(225, 29, 72, 0);
+    }
+}
+
+.animate-pulse-ring {
+    animation: pulse-ring 2.2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* Weekly Swiper Carousel */
+.snap-x-container {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+.snap-slide {
+    scroll-snap-align: start;
+}
+
+/* Print Stylesheet for Timesheet / Invoice */
+@media print {
+    body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+    }
+    .no-print, header, .btn-press, #clockBtn, #weeklySwiperContainer, #liveStats, .hide-print {
+        display: none !important;
+    }
+    #reportModal {
+        position: static !important;
+        background: none !important;
+        opacity: 1 !important;
+        display: block !important;
+        padding: 0 !important;
+    }
+    #reportModalContent {
+        background: #ffffff !important;
+        color: #000000 !important;
+        border: none !important;
+        box-shadow: none !important;
+        max-width: 100% !important;
+        transform: none !important;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        color: #000000 !important;
+    }
+}

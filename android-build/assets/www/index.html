@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#9333ea">
+    <meta name="description" content="Professional Material Design 3 Timeclock & Overtime Tracker for Randall Engineering">
+    <title>Jokarz Timeclock - Randall Engineering</title>
+    
+    <!-- Tailwind CSS & Google Material Icons & Web App Manifest -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="flex flex-col min-h-screen bg-slate-900 text-slate-100 font-sans p-4 overflow-y-auto hide-scroll transition-colors duration-300">
+
+    <!-- Top App Bar & Actions -->
+    <header class="flex justify-between items-center mt-1 px-1 shrink-0 no-print">
+        <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 rounded-xl bg-purple-600/30 flex items-center justify-center border border-purple-500/40 shadow-sm">
+                <span class="material-icons text-purple-400 text-lg">timer</span>
+            </div>
+            <div>
+                <h1 class="text-base font-bold tracking-tight text-slate-100">Jokarz Timeclock</h1>
+                <div class="text-[10px] text-slate-400 font-medium">Randall Engineering</div>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-2">
+            <!-- Analytics Button -->
+            <button onclick="UIController.openAnalyticsModal()" title="Analytics & Trends" class="p-2 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors">
+                <span class="material-icons text-lg">bar_chart</span>
+            </button>
+            
+            <!-- Settings Button -->
+            <button onclick="UIController.openSettingsModal()" title="Settings & Schedules" class="p-2 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors">
+                <span class="material-icons text-lg">settings</span>
+            </button>
+            
+            <!-- Gross / Net Pay Toggle -->
+            <div class="flex bg-slate-800 rounded-xl p-1 border border-slate-700 shadow-sm">
+                <button id="modeGrossBtn" class="px-3 py-1 rounded-lg text-xs font-bold transition-colors bg-purple-600 text-white shadow-sm">Gross</button>
+                <button id="modeNetBtn" class="px-3 py-1 rounded-lg text-xs font-bold transition-colors text-slate-400 hover:text-slate-200">Take Home</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Quick Action Bar & Rate Input -->
+    <div class="flex justify-between items-center px-1 mb-3 mt-3 shrink-0 no-print">
+        <div class="flex space-x-2">
+            <!-- Add Missed Shift Button -->
+            <button onclick="UIController.openAddModal()" class="flex items-center px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-full border border-slate-700 text-xs font-semibold text-slate-300 transition-colors">
+                <span class="material-icons text-sm mr-1 text-purple-400">add_circle</span> Add Shift
+            </button>
+            
+            <!-- PTO / Holiday Button -->
+            <button onclick="UIController.openPtoModal()" class="flex items-center px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-full border border-slate-700 text-xs font-semibold text-slate-300 transition-colors">
+                <span class="material-icons text-sm mr-1 text-emerald-400">event_available</span> PTO / Hol
+            </button>
+
+            <!-- Timesheet Report / Print -->
+            <button onclick="UIController.openReportModal()" class="flex items-center px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 rounded-full border border-slate-700 text-xs font-semibold text-slate-300 transition-colors">
+                <span class="material-icons text-sm mr-1 text-amber-400">summarize</span> Report
+            </button>
+        </div>
+
+        <!-- Hourly Rate Input -->
+        <div class="flex items-center bg-slate-800 rounded-full px-3.5 py-1.5 shadow-sm border border-slate-700">
+            <span id="rateLabel" class="text-slate-400 text-xs mr-2 font-semibold uppercase tracking-wider">Gross</span>
+            <span class="text-slate-400 material-icons text-sm mr-0.5">attach_money</span>
+            <input type="number" id="hourlyRate" step="0.5" class="w-14 text-right outline-none bg-transparent font-medium text-slate-200 text-sm" placeholder="Rate">
+            <span class="text-slate-500 text-xs ml-0.5">/hr</span>
+        </div>
+    </div>
+
+    <!-- Main Clock Card -->
+    <div class="md-card rounded-3xl p-6 flex flex-col items-center justify-center mb-4 relative overflow-hidden shrink-0 no-print">
+        <div id="statusText" class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4 transition-colors duration-300">
+            Ready to Work
+        </div>
+
+        <!-- Big Central Action Button -->
+        <button id="clockBtn" class="btn-press relative w-36 h-36 rounded-full flex flex-col items-center justify-center text-white font-bold text-lg transition-all duration-300 bg-purple-600 shadow-lg shadow-purple-600/40">
+            <span id="clockIcon" class="material-icons text-4xl mb-1">play_arrow</span>
+            <span id="clockBtnText">CLOCK IN</span>
+        </button>
+
+        <!-- Live Clock & Status Stats -->
+        <div id="liveStats" class="mt-4 flex flex-col items-center opacity-0 h-0 pointer-events-none transition-all duration-300 w-full">
+            <div onclick="UIController.openActiveTimerModal()" title="Click to adjust start time" class="flex items-center justify-center cursor-pointer active:scale-95 transition-transform group py-1 px-4 rounded-xl hover:bg-slate-700/40">
+                <div class="text-4xl font-mono font-light text-slate-100 tracking-tight" id="liveTimer">00:00:00</div>
+                <span class="material-icons text-slate-500 text-lg ml-2 group-hover:text-purple-400 transition-colors">edit</span>
+            </div>
+            
+            <!-- Live Status Box (Standard Shift / Banking / Live Overtime) -->
+            <div class="flex items-center justify-center mt-2 w-full" id="liveStatusBox">
+                <!-- Injected via TimerEngine.tick() -->
+            </div>
+
+            <!-- Manual Break / Lunch Toggle Button -->
+            <div class="mt-3 flex justify-center">
+                <button id="breakBtn" class="flex items-center px-4 py-1.5 rounded-full bg-amber-600/30 text-amber-400 border border-amber-500/40 text-xs font-bold transition-all shadow-sm">
+                    <span class="material-icons text-sm mr-1">pause</span> Break / Lunch
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-2 gap-3 mb-4 shrink-0 no-print">
+        <!-- Today Card -->
+        <div class="md-card rounded-2xl p-4 flex flex-col">
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Today</span>
+                <span class="text-[9px] text-purple-400 font-bold px-1.5 py-0.5 bg-purple-400/10 rounded uppercase" id="todayPayableType">Salary</span>
+            </div>
+            <div class="flex items-baseline space-x-1.5">
+                <span class="text-2xl font-bold text-emerald-400" id="todayActualEarnings">$0.00</span>
+                <span class="text-[11px] font-semibold text-purple-400 transition-opacity" id="todayBonusEarnings"></span>
+            </div>
+            <span class="text-xs font-medium text-slate-300 mb-2" id="todayActualHours">0.0h Paid</span>
+            
+            <div class="mt-auto pt-2 border-t border-slate-700/50 flex justify-between items-center">
+                <span class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Tech Clocked</span>
+                <span class="text-xs font-bold text-slate-400 font-mono" id="todayTechDetails">0h 0m</span>
+            </div>
+        </div>
+        
+        <!-- Pay Period Card -->
+        <div class="md-card rounded-2xl p-4 flex flex-col">
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pay Period</span>
+                <span class="text-[9px] text-emerald-400 font-bold px-1.5 py-0.5 bg-emerald-400/10 rounded uppercase" id="periodLabel">Current</span>
+            </div>
+            <div class="flex items-baseline space-x-1.5">
+                <span class="text-2xl font-bold text-emerald-400" id="periodActualEarnings">$0.00</span>
+                <span class="text-[11px] font-semibold text-purple-400 transition-opacity" id="periodBonusEarnings"></span>
+            </div>
+            <span class="text-xs font-medium text-slate-300 mb-2" id="periodActualHours">0.0h Paid</span>
+            
+            <div class="mt-auto pt-2 border-t border-slate-700/50 flex justify-between items-center">
+                <span class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Tech Clocked</span>
+                <span class="text-xs font-bold text-slate-400 font-mono" id="periodTechDetails">0h 0m</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Swiper View -->
+    <div class="shrink-0 mb-4 no-print">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1 mb-2">Weekly Bank & Input</h3>
+        <div class="flex overflow-x-auto snap-x-container hide-scroll space-x-3 pb-2 px-1" id="weeklySwiperContainer">
+            <!-- Weekly Cards injected via UIController.renderWeeklySwiper() -->
+        </div>
+    </div>
+
+    <!-- Session Log Table / List -->
+    <div class="flex-1 min-h-[160px] flex flex-col no-print">
+        <div class="flex justify-between items-center mb-2 px-1">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Recent Completed Shifts</h3>
+            <div class="flex space-x-2">
+                <button onclick="UIController.exportCSV()" title="Export Timesheet to CSV" class="text-[11px] font-semibold text-purple-400 hover:text-purple-300 flex items-center">
+                    <span class="material-icons text-xs mr-0.5">download</span> CSV
+                </button>
+            </div>
+        </div>
+        <div id="sessionLogContainer" class="flex flex-col space-y-2 overflow-y-auto pb-6 hide-scroll">
+            <!-- Populated dynamically by UIController.renderSessionLog() -->
+        </div>
+    </div>
+
+    <!-- Footer Tools: Backup / Restore / Clear -->
+    <footer class="shrink-0 flex justify-between items-center border-t border-slate-800 pt-3 pb-4 mt-2 px-1 text-xs text-slate-500 no-print">
+        <div class="flex space-x-3">
+            <button onclick="UIController.exportJSONBackup()" class="hover:text-slate-300 transition-colors uppercase tracking-wider font-semibold">Backup JSON</button>
+            <span>•</span>
+            <button onclick="UIController.triggerJSONImport()" class="hover:text-slate-300 transition-colors uppercase tracking-wider font-semibold">Restore</button>
+        </div>
+        <button onclick="UIController.clearData()" class="hover:text-rose-400 transition-colors uppercase tracking-wider font-semibold">Reset All</button>
+    </footer>
+
+    <!-- ================= MODALS ================= -->
+
+    <!-- Edit Active Session Modal -->
+    <div id="editActiveModal" class="fixed inset-0 modal-backdrop hidden flex flex-col items-center justify-center z-50 p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-slate-800 rounded-3xl p-6 w-full max-w-sm border border-slate-700 shadow-2xl transform transition-transform duration-300 scale-95" id="editActiveModalContent">
+            <h2 class="text-base font-bold text-slate-100 mb-4">Edit Active Start Time</h2>
+            <div class="mb-5">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1.5">Start Time</label>
+                <input type="datetime-local" id="editActiveStartTime" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-200 outline-none focus:border-purple-500 transition-colors text-sm">
+            </div>
+            <div class="flex justify-end space-x-2">
+                <button onclick="UIController.closeActiveTimerModal()" class="text-slate-400 hover:text-slate-200 font-bold px-4 py-2 text-sm transition-colors">Cancel</button>
+                <button onclick="UIController.saveActiveTimer()" class="bg-purple-600 hover:bg-purple-500 text-white rounded-xl px-5 py-2.5 font-bold text-sm shadow transition-colors">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Completed Session Modal -->
+    <div id="editModal" class="fixed inset-0 modal-backdrop hidden flex flex-col items-center justify-center z-50 p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-slate-800 rounded-3xl p-6 w-full max-w-sm border border-slate-700 shadow-2xl transform transition-transform duration-300 scale-95" id="editModalContent">
+            <h2 class="text-base font-bold text-slate-100 mb-4">Edit Completed Session</h2>
+            <input type="hidden" id="editSessionIndex">
+            <div class="mb-3">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Start Time</label>
+                <input type="datetime-local" id="editStartTime" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 outline-none focus:border-purple-500 text-sm">
+            </div>
+            <div class="mb-3">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">End Time</label>
+                <input type="datetime-local" id="editEndTime" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 outline-none focus:border-purple-500 text-sm">
+            </div>
+            <div class="mb-5">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Shift Notes / Job Code</label>
+                <input type="text" id="editSessionNote" placeholder="e.g. Shop maintenance, Job #1042" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 outline-none focus:border-purple-500 text-sm">
+            </div>
+            <div class="flex justify-between items-center">
+                <button onclick="UIController.deleteSession()" class="text-rose-400 hover:text-rose-300 font-bold p-2 text-sm flex items-center transition-colors">
+                    <span class="material-icons text-sm mr-1">delete</span> Delete
+                </button>
+                <div class="flex space-x-2">
+                    <button onclick="UIController.closeEditModal()" class="text-slate-400 hover:text-slate-200 font-bold px-3 py-2 text-sm transition-colors">Cancel</button>
+                    <button onclick="UIController.saveSession()" class="bg-purple-600 hover:bg-purple-500 text-white rounded-xl px-5 py-2.5 font-bold text-sm shadow transition-colors">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Shift Entry Modal -->
+    <div id="addModal" class="fixed inset-0 modal-backdrop hidden flex flex-col items-center justify-center z-50 p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-slate-800 rounded-3xl p-6 w-full max-w-sm border border-slate-700 shadow-2xl transform transition-transform duration-300 scale-95" id="addModalContent">
+            <h2 class="text-base font-bold text-slate-100 mb-4">Add Past Shift</h2>
+            <div class="mb-3">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Start Time</label>
+                <input type="datetime-local" id="addStartTime" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 outline-none focus:border-purple-500 text-sm">
+            </div>
+            <div class="mb-3">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">End Time</label>
+                <input type="datetime-local" id="addEndTime" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 outline-none focus:border-purple-500 text-sm">
+            </div>
+            <div class="mb-5">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Notes / Job Code</label>
+                <input type="text" id="addSessionNote" placeholder="e.g. Regular shift, field service" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 outline-none focus:border-purple-500 text-sm">
+            </div>
+            <div class="flex justify-end space-x-2">
+                <button onclick="UIController.closeAddModal()" class="text-slate-400 hover:text-slate-200 font-bold px-4 py-2 text-sm transition-colors">Cancel</button>
+                <button onclick="UIController.saveManualSession()" class="bg-purple-600 hover:bg-purple-500 text-white rounded-xl px-5 py-2.5 font-bold text-sm shadow transition-colors">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PTO & Holiday Entry Modal -->
+    <div id="ptoModal" class="fixed inset-0 modal-backdrop hidden flex flex-col items-center justify-center z-50 p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-slate-800 rounded-3xl p-6 w-full max-w-sm border border-slate-700 shadow-2xl transform transition-transform duration-300 scale-95" id="ptoModalContent">
+            <h2 class="text-base font-bold text-slate-100 mb-3">Log PTO / Holiday / Sick Hours</h2>
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Date</label>
+                    <input type="date" id="ptoDate" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-slate-200 outline-none focus:border-purple-500 text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Hours</label>
+                    <input type="number" id="ptoHours" value="10" step="0.5" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-slate-200 outline-none focus:border-purple-500 text-xs">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Type</label>
+                    <select id="ptoType" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-slate-200 outline-none focus:border-purple-500 text-xs">
+                        <option value="PTO">PTO</option>
+                        <option value="Holiday">Holiday</option>
+                        <option value="Sick">Sick Leave</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Notes</label>
+                    <input type="text" id="ptoNote" placeholder="e.g. Labor Day" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-slate-200 outline-none focus:border-purple-500 text-xs">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-2 mb-4">
+                <button onclick="UIController.savePto()" class="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-4 py-2 font-bold text-xs shadow transition-colors">Add Entry</button>
+            </div>
+
+            <div class="border-t border-slate-700 pt-3">
+                <div class="text-xs font-bold text-slate-400 uppercase mb-2">Logged PTO / Holidays</div>
+                <div id="ptoListContainer" class="max-h-36 overflow-y-auto hide-scroll">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <div class="flex justify-end mt-4">
+                <button onclick="UIController.closePtoModal()" class="text-slate-400 hover:text-slate-200 font-bold px-4 py-2 text-xs transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics & Chart Modal -->
+    <div id="analyticsModal" class="fixed inset-0 modal-backdrop hidden flex flex-col items-center justify-center z-50 p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-slate-800 rounded-3xl p-6 w-full max-w-md border border-slate-700 shadow-2xl transform transition-transform duration-300 scale-95" id="analyticsModalContent">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-base font-bold text-slate-100 flex items-center">
+                    <span class="material-icons text-purple-400 text-lg mr-1.5">insights</span> Weekly Analytics & Trends
+                </h2>
+                <button onclick="UIController.closeAnalyticsModal()" class="text-slate-400 hover:text-slate-200">
+                    <span class="material-icons text-base">close</span>
+                </button>
+            </div>
+
+            <div class="p-3 bg-slate-900/90 rounded-2xl border border-slate-700/60 mb-4" id="weeklyChartContainer">
+                <!-- SVG Chart injected via ChartEngine.renderWeeklyBreakdown() -->
+            </div>
+
+            <div class="flex justify-around text-center text-xs p-3 bg-slate-900/50 rounded-xl border border-slate-700/40 mb-4">
+                <div>
+                    <div class="text-slate-400 font-semibold uppercase text-[10px]">Regular Bar</div>
+                    <div class="text-purple-400 font-bold text-sm mt-0.5">Base Hours</div>
+                </div>
+                <div>
+                    <div class="text-slate-400 font-semibold uppercase text-[10px]">Pink Top Bar</div>
+                    <div class="text-rose-400 font-bold text-sm mt-0.5">Overtime</div>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button onclick="UIController.closeAnalyticsModal()" class="bg-purple-600 hover:bg-purple-500 text-white rounded-xl px-5 py-2 font-bold text-xs shadow transition-colors">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 modal-backdrop hidden flex flex-col items-center justify-center z-50 p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-slate-800 rounded-3xl p-6 w-full max-w-sm border border-slate-700 shadow-2xl transform transition-transform duration-300 scale-95 max-h-[90vh] overflow-y-auto hide-scroll" id="settingsModalContent">
+            <h2 class="text-base font-bold text-slate-100 mb-4 flex items-center">
+                <span class="material-icons text-purple-400 text-lg mr-1.5">tune</span> App Settings & Rules
+            </h2>
+
+            <div class="space-y-3 mb-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Pay Schedule Cycle</label>
+                    <select id="settingSchedule" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 outline-none focus:border-purple-500 text-xs">
+                        <option value="semimonthly">Semi-Monthly (1st-15th & 16th-EOM)</option>
+                        <option value="biweekly">Bi-Weekly (Every 2 Weeks)</option>
+                        <option value="weekly">Weekly (Monday - Sunday)</option>
+                        <option value="monthly">Monthly (1st - Last Day)</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Standard Shift</label>
+                        <input type="number" id="settingStandardHours" step="0.5" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 outline-none focus:border-purple-500 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">OT Cliff Target</label>
+                        <input type="number" id="settingCliffHours" step="0.5" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 outline-none focus:border-purple-500 text-xs">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">OT Multiplier</label>
+                        <select id="settingOtMultiplier" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 outline-none focus:border-purple-500 text-xs">
+                            <option value="1.0">1.0x (Straight Rate)</option>
+                            <option value="1.5">1.5x (Time & Half)</option>
+                            <option value="2.0">2.0x (Double Time)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Visual Theme</label>
+                        <select id="settingTheme" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 outline-none focus:border-purple-500 text-xs">
+                            <option value="dark">Slate Dark</option>
+                            <option value="amoled">AMOLED Black</option>
+                            <option value="emerald">Cyber Emerald</option>
+                            <option value="amber">Amber Glow</option>
+                            <option value="light">Material Light</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Toggles -->
+                <div class="space-y-2 pt-2 border-t border-slate-700">
+                    <label class="flex items-center justify-between text-xs text-slate-300">
+                        <span>Sound Chimes & Clicks</span>
+                        <input type="checkbox" id="settingSound" class="w-4 h-4 rounded text-purple-600 bg-slate-900 border-slate-700 focus:ring-0">
+                    </label>
+                    <label class="flex items-center justify-between text-xs text-slate-300">
+                        <span>Haptic Vibration Feedback</span>
+                        <input type="checkbox" id="settingHaptic" class="w-4 h-4 rounded text-purple-600 bg-slate-900 border-slate-700 focus:ring-0">
+                    </label>
+                    <label class="flex items-center justify-between text-xs text-slate-300">
+                        <span>Shift Milestone Notifications</span>
+                        <input type="checkbox" id="settingNotifications" class="w-4 h-4 rounded text-purple-600 bg-slate-900 border-slate-700 focus:ring-0">
+                    </label>
+                    <label class="flex items-center justify-between text-xs text-slate-300">
+                        <span>Auto-Deduct 30m Meal After 4h</span>
+                        <input type="checkbox" id="settingAutoBreak" class="w-4 h-4 rounded text-purple-600 bg-slate-900 border-slate-700 focus:ring-0">
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2">
+                <button onclick="UIController.closeSettingsModal()" class="text-slate-400 hover:text-slate-200 font-bold px-3 py-2 text-xs transition-colors">Cancel</button>
+                <button onclick="UIController.saveSettings()" class="bg-purple-600 hover:bg-purple-500 text-white rounded-xl px-5 py-2.5 font-bold text-xs shadow transition-colors">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timesheet Report / Print Modal -->
+    <div id="reportModal" class="fixed inset-0 modal-backdrop hidden flex flex-col items-center justify-center z-50 p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-slate-800 rounded-3xl p-6 w-full max-w-lg border border-slate-700 shadow-2xl transform transition-transform duration-300 scale-95 max-h-[90vh] overflow-y-auto hide-scroll" id="reportModalContent">
+            <div class="flex justify-between items-center mb-4 no-print">
+                <h2 class="text-base font-bold text-slate-100 flex items-center">
+                    <span class="material-icons text-amber-400 text-lg mr-1.5">description</span> Timesheet Report Summary
+                </h2>
+                <div class="flex space-x-2">
+                    <button onclick="UIController.printReport()" class="flex items-center bg-purple-600 hover:bg-purple-500 text-white rounded-xl px-3 py-1.5 text-xs font-bold shadow transition-colors">
+                        <span class="material-icons text-xs mr-1">print</span> Print / Save PDF
+                    </button>
+                    <button onclick="UIController.closeReportModal()" class="text-slate-400 hover:text-slate-200">
+                        <span class="material-icons text-base">close</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="reportBody">
+                <!-- Generated dynamically by UIController.openReportModal() -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Reusable Confirm Modal -->
+    <div id="confirmModal" class="fixed inset-0 modal-backdrop hidden flex flex-col items-center justify-center z-50 p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-slate-800 rounded-3xl p-6 w-full max-w-sm border border-slate-700 shadow-2xl transform transition-transform duration-300 scale-95" id="confirmModalContent">
+            <h2 class="text-base font-bold text-slate-100 mb-2" id="confirmTitle">Confirm</h2>
+            <p class="text-slate-400 text-xs mb-6" id="confirmMessage">Are you sure?</p>
+            <div class="flex justify-end space-x-2">
+                <button onclick="UIController.closeConfirm()" class="text-slate-400 hover:text-slate-200 font-bold px-4 py-2 text-xs transition-colors">Cancel</button>
+                <button id="confirmActionBtn" class="bg-rose-600 hover:bg-rose-500 text-white rounded-xl px-5 py-2.5 font-bold text-xs shadow transition-colors">Yes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="alertModal" class="fixed inset-0 modal-backdrop hidden flex flex-col items-center justify-center z-50 p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-slate-800 rounded-3xl p-6 w-full max-w-sm border border-slate-700 shadow-2xl transform transition-transform duration-300 scale-95" id="alertModalContent">
+            <h2 class="text-base font-bold text-slate-100 mb-2">Notice</h2>
+            <p class="text-slate-400 text-xs mb-6" id="alertMessage">Message goes here.</p>
+            <div class="flex justify-end">
+                <button onclick="UIController.closeAlert()" class="bg-purple-600 hover:bg-purple-500 text-white rounded-xl px-5 py-2.5 font-bold text-xs shadow transition-colors">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Logic Scripts -->
+    <script src="js/state.js"></script>
+    <script src="js/payroll.js"></script>
+    <script src="js/audio_haptics.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/tasker.js"></script>
+    <script src="js/timer.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

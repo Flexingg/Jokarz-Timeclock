@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+*.log
+android-build/bin/
+android-build/dex/
+android-build/compiled_res.zip
+android-build/base.apk
+android-build/aligned.apk
+android-build/debug.keystore

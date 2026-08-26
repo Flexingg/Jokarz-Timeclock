@@ -678,6 +678,7 @@ fun SettingsDialog(
     var workLng by remember { mutableDoubleStateOf(currentSettings.workLongitude) }
     var radiusMeters by remember { mutableFloatStateOf(currentSettings.geofenceRadiusMeters) }
     var addressName by remember { mutableStateOf(currentSettings.workAddressName) }
+    var useTaskerFallback by remember { mutableStateOf(currentSettings.useTaskerFallback) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -753,6 +754,92 @@ fun SettingsDialog(
                         valueRange = 50f..500f,
                         steps = 8
                     )
+                }
+
+                // TASKER & BACKGROUND LOCATION SECTION
+                if (geofenceEnabled) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text("GEOFENCE OPTIONS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Tasker fallback toggle
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Use Tasker for Clock-In/Out", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Bypass native geofence, use Tasker automation instead",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Checkbox(checked = useTaskerFallback, onCheckedChange = { useTaskerFallback = it })
+                    }
+
+                    if (useTaskerFallback) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        FilledTonalButton(
+                            onClick = {
+                                com.randallengineering.jokarztimeclock.engine.TaskerHelper.launchTaskerImport(context)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Import Tasker Profile", fontSize = 12.sp)
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Tap to one-click import the Jokarz Timeclock profile into Tasker (Tasker must be installed).",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Background location permission button
+                    val bgLocationGranted = com.randallengineering.jokarztimeclock.engine.PermissionHelper.hasLocationPermissions(context)
+                    if (!bgLocationGranted) {
+                        FilledTonalButton(
+                            onClick = {
+                                // Open app settings so user can grant "Allow all the time"
+                                val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = android.net.Uri.fromParts("package", context.packageName, null)
+                                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        ) {
+                            Icon(Icons.Filled.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Grant Background Location Permission", fontSize = 12.sp)
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "⚠ Background location required. Tap above → Location → select \"Allow all the time\".",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        Text(
+                            "✓ Background location permission granted",
+                            fontSize = 11.sp,
+                            color = EmeraldSuccess,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -876,6 +963,7 @@ fun SettingsDialog(
                             hideMoneyAmounts = hideMoneyAmounts,
                             autoBreakDeduction = autoBreak,
                             geofenceEnabled = geofenceEnabled,
+                            useTaskerFallback = useTaskerFallback,
                             workLatitude = workLat,
                             workLongitude = workLng,
                             geofenceRadiusMeters = radiusMeters,

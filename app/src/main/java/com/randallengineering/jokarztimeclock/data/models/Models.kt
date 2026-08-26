@@ -33,6 +33,7 @@ data class AppSettings(
     val hideMoneyAmounts: Boolean = false,
     val autoBreakDeduction: Boolean = true,
     val geofenceEnabled: Boolean = false,
+    val useTaskerFallback: Boolean = false,
     val workLatitude: Double = 0.0,
     val workLongitude: Double = 0.0,
     val geofenceRadiusMeters: Float = 150f,

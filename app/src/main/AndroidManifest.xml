@@ -48,7 +48,12 @@
 
         <receiver
             android:name=".engine.GeofenceBroadcastReceiver"
-            android:exported="true" />
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.randallengineering.jokarztimeclock.ACTION_CLOCK_IN" />
+                <action android:name="com.randallengineering.jokarztimeclock.ACTION_CLOCK_OUT" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

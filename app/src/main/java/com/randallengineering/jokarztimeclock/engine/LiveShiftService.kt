@@ -23,6 +23,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -32,13 +33,14 @@ import kotlin.math.max
 class LiveShiftService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
-    private var updateJob: Job? = null
+    private var stateCollectJob: Job? = null
+    private var refreshJob: Job? = null
     private lateinit var repository: TimeclockRepository
     private lateinit var notificationManager: NotificationManager
 
     companion object {
-        // Updated channel ID to ensure Android/ColorOS creates it with DEFAULT/HIGH importance for Live Island capsules
-        const val CHANNEL_LIVE_ID = "jokarz_live_shift_island_v3"
+        // Updated channel ID to ensure Android/ColorOS creates it with HIGH importance for Status Bar Chips and Live Alerts
+        const val CHANNEL_LIVE_ID = "jokarz_live_shift_chip_v4"
         const val NOTIFICATION_LIVE_ID = 1003
 
         fun start(context: Context) {
@@ -67,22 +69,21 @@ class LiveShiftService : Service() {
 
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Delete legacy low-importance channel if present
             try {
                 notificationManager.deleteNotificationChannel("jokarz_live_shift_channel")
+                notificationManager.deleteNotificationChannel("jokarz_live_shift_island_v3")
             } catch (e: Exception) {
                 // Ignore
             }
 
-            // Importance must be at least IMPORTANCE_DEFAULT for ColorOS Aqua Dynamics / Dynamic Island / Live Alerts
             val liveChannel = NotificationChannel(
                 CHANNEL_LIVE_ID,
-                "Live Shift Stopwatch & Tracker",
-                NotificationManager.IMPORTANCE_DEFAULT
+                "Live Shift Status Bar Chip",
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Live ongoing shift chronometer and status in Dynamic Island and status bar"
+                description = "Live ongoing shift chronometer chip in Status Bar and Dynamic Island"
                 setShowBadge(true)
-                setSound(null, null) // Silent updates
+                setSound(null, null) // Completely silent so it acts as an ongoing live activity
                 enableVibration(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
@@ -113,23 +114,34 @@ class LiveShiftService : Service() {
             startForeground(NOTIFICATION_LIVE_ID, initialNotification)
         }
 
-        startUpdateLoop()
+        startStateMonitoring()
         return START_STICKY
     }
 
-    private fun startUpdateLoop() {
-        updateJob?.cancel()
-        updateJob = serviceScope.launch {
-            while (isActive) {
-                val state = repository.state.value
+    private fun startStateMonitoring() {
+        stateCollectJob?.cancel()
+        stateCollectJob = serviceScope.launch {
+            repository.state.collectLatest { state ->
                 if (!state.isClockedIn || state.currentSessionStart == null) {
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
-                    break
+                } else {
+                    val notification = buildNotification(state, System.currentTimeMillis())
+                    notificationManager.notify(NOTIFICATION_LIVE_ID, notification)
                 }
-                val notification = buildNotification(state, System.currentTimeMillis())
-                notificationManager.notify(NOTIFICATION_LIVE_ID, notification)
-                delay(1000L)
+            }
+        }
+
+        // Ambient refresh loop: update subtitle every 30 seconds (NOT every 1 second, so the native chronometer chip stays stable)
+        refreshJob?.cancel()
+        refreshJob = serviceScope.launch {
+            while (isActive) {
+                delay(30000L)
+                val state = repository.state.value
+                if (state.isClockedIn && state.currentSessionStart != null) {
+                    val notification = buildNotification(state, System.currentTimeMillis())
+                    notificationManager.notify(NOTIFICATION_LIVE_ID, notification)
+                }
             }
         }
     }
@@ -159,7 +171,7 @@ class LiveShiftService : Service() {
                     val sign = if (prevBanked > 0) "+" else ""
                     " ($sign${String.format("%.1f", prevBanked)}h bank)"
                 } else ""
-                "Remaining: ${PayrollEngine.formatDuration(remainingMs)}$bankNote"
+                "Remaining: ${PayrollEngine.formatDurationShort(remainingMs)}$bankNote"
             } else if (elapsedMs < cliffTargetMs) {
                 val bankingHrs = (elapsedMs - standardMs) / 3600000.0
                 "Banking Buffer: +${String.format("%.2f", bankingHrs)}h (Unpaid)"
@@ -200,30 +212,42 @@ class LiveShiftService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val title = if (state.isOnBreak) "⏸️ On Lunch / Break" else "⏱️ Shift Active: ${PayrollEngine.formatDuration(elapsedMs)}"
+        // Static, stable title ensures the system UI maintains the status bar chip
+        val title = if (state.isOnBreak) "⏸️ Shift Paused (Lunch)" else "⏱️ Shift Active"
 
         // ColorOS Aqua Dynamics / OnePlus Fluid Cloud & Android 16 Live Activity bundle extras
         val liveExtras = Bundle().apply {
-            putBoolean("android.substName", true)
-            putString("oplus.isLiveAlert", "true")
-            putBoolean("oplus.isLiveAlert", true)
-            putBoolean("com.oplus.notification.isLiveAlert", true)
-            putString("android.extra.ongoing_activity_type", "stopwatch")
+            // Android 16 Rich Ongoing Notification Promoted Status
             putBoolean("android.promotedOngoing", true)
+            putBoolean("android.extra.promoted_ongoing", true)
+            putString("android.extra.ongoing_activity_type", "stopwatch")
+            putBoolean("android.substName", true)
+
+            // ColorOS / OxygenOS Fluid Cloud / Aqua Dynamics (Oppo Find X / OnePlus)
+            putBoolean("oplus.isLiveAlert", true)
+            putBoolean("oplus.capsule.enable", true)
+            putString("oplus.liveAlert.type", "stopwatch")
+            putString("oplus_view_type", "capsule")
+            putString("capsule_type", "stopwatch")
+            putBoolean("com.oplus.notification.isLiveAlert", true)
+            putString("com.oplus.notification.capsule_type", "stopwatch")
+            putString("oplus.capsule.title", if (state.isOnBreak) "Paused" else "Shift Active")
+            putString("oplus.capsule.text", statusText)
         }
 
         return NotificationCompat.Builder(this, CHANNEL_LIVE_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_stopwatch)
             .setContentTitle(title)
             .setContentText(statusText)
-            .setSubText("Jokarz Live")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setSubText("Jokarz Timeclock")
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setShowWhen(true)
+            .setShowWhen(!state.isOnBreak)
             .setUsesChronometer(!state.isOnBreak)
+            .setChronometerCountDown(false)
             .setWhen(startMs)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setStyle(NotificationCompat.BigTextStyle().bigText(statusText))
@@ -244,6 +268,8 @@ class LiveShiftService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        updateJob?.cancel()
+        stateCollectJob?.cancel()
+        refreshJob?.cancel()
     }
 }
+

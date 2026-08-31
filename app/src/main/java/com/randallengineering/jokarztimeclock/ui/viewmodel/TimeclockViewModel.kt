@@ -55,14 +55,18 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
         // Register initial geofence if configured
         geofenceManager.updateGeofence(state.value.settings)
 
-        // 1-second live tick loop
+        // If app opened while already clocked in, ensure live service is running
+        if (state.value.isClockedIn && state.value.settings.liveNotificationEnabled) {
+            notificationHelper.showOrUpdateLiveShiftNotification(state.value, System.currentTimeMillis())
+        }
+
+        // 1-second UI tick loop (only updates UI tick StateFlow and milestone check, NO notification spam)
         viewModelScope.launch {
             while (isActive) {
                 val now = System.currentTimeMillis()
                 _tick.value = now
                 val s = state.value
                 checkMilestones(s, now)
-                notificationHelper.showOrUpdateLiveShiftNotification(s, now)
                 delay(1000L)
             }
         }
@@ -110,6 +114,9 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
         } else {
             audioHaptic.playClockInSound(s.settings.soundEnabled)
             repository.clockIn()
+            if (s.settings.liveNotificationEnabled) {
+                notificationHelper.showOrUpdateLiveShiftNotification(state.value, System.currentTimeMillis())
+            }
             taskerBridge.sendEvent("Clocked In")
         }
         pushTaskerData()
@@ -133,6 +140,11 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
     fun updateSettings(settings: AppSettings) {
         repository.updateSettings(settings)
         geofenceManager.updateGeofence(settings)
+        if (!settings.liveNotificationEnabled) {
+            notificationHelper.clearLiveNotification()
+        } else if (state.value.isClockedIn) {
+            notificationHelper.showOrUpdateLiveShiftNotification(state.value, System.currentTimeMillis())
+        }
     }
 
     fun updateActiveStartTime(startMs: Long) {

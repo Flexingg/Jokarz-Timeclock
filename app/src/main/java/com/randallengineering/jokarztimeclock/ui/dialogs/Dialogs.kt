@@ -250,7 +250,7 @@ fun EditActiveTimerDialog(
 fun EditSessionDialog(
     session: Session,
     onDismiss: () -> Unit,
-    onSave: (startMs: Long, endMs: Long, note: String) -> Unit,
+    onSave: (startMs: Long, endMs: Long, note: String, isPutInSystem: Boolean) -> Unit,
     onDelete: () -> Unit
 ) {
     val calStart = Calendar.getInstance().apply { timeInMillis = session.start }
@@ -259,6 +259,7 @@ fun EditSessionDialog(
     var startMs by remember { mutableLongStateOf(session.start) }
     var endMs by remember { mutableLongStateOf(session.end) }
     var noteText by remember { mutableStateOf(session.note) }
+    var isPutInSystem by remember { mutableStateOf(session.isPutInSystem) }
 
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
@@ -341,12 +342,32 @@ fun EditSessionDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.fillMaxWidth().clickable { isPutInSystem = !isPutInSystem }
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Entered into Payroll System", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Check when overtime has been submitted", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Checkbox(checked = isPutInSystem, onCheckedChange = { isPutInSystem = it })
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onSave(startMs, endMs, noteText.trim())
+                    onSave(startMs, endMs, noteText.trim(), isPutInSystem)
                 }
             ) {
                 Text("Save")
@@ -371,7 +392,7 @@ fun EditSessionDialog(
 @Composable
 fun AddManualShiftDialog(
     onDismiss: () -> Unit,
-    onSave: (startMs: Long, endMs: Long, note: String) -> Unit
+    onSave: (startMs: Long, endMs: Long, note: String, isPutInSystem: Boolean) -> Unit
 ) {
     val now = System.currentTimeMillis()
     val defaultStart = now - (8L * 3600000L)
@@ -379,6 +400,7 @@ fun AddManualShiftDialog(
     var startMs by remember { mutableLongStateOf(defaultStart) }
     var endMs by remember { mutableLongStateOf(now) }
     var noteText by remember { mutableStateOf("") }
+    var isPutInSystem by remember { mutableStateOf(false) }
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showStartTimePicker by remember { mutableStateOf(false) }
@@ -502,12 +524,32 @@ fun AddManualShiftDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    modifier = Modifier.fillMaxWidth().clickable { isPutInSystem = !isPutInSystem }
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Entered into Payroll System", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Check if overtime already submitted", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Checkbox(checked = isPutInSystem, onCheckedChange = { isPutInSystem = it })
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onSave(startMs, endMs, noteText.trim())
+                    onSave(startMs, endMs, noteText.trim(), isPutInSystem)
                 }
             ) {
                 Text("Add Shift")

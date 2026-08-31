@@ -107,4 +107,34 @@ class PayrollEngineTest {
         assertEquals(5.5, stats.payableHours, 0.01)
         assertEquals(5.5, stats.otHours, 0.01)
     }
+
+    @Test
+    fun testCalculateSessionOtAndGetOtSessions() {
+        val monStart = sdf.parse("2026-08-24 06:00")!!.time
+        val monEnd = sdf.parse("2026-08-24 19:15")!!.time // 13.25h -> 13.25 - 10.5 = 2.75h OT
+
+        val satStart = sdf.parse("2026-08-29 07:00")!!.time
+        val satEnd = sdf.parse("2026-08-29 12:00")!!.time // 5.0h -> 4.5h OT
+
+        val regularStart = sdf.parse("2026-08-25 06:00")!!.time
+        val regularEnd = sdf.parse("2026-08-25 16:30")!!.time // 10.5h -> 0.0h OT
+
+        val sessMon = Session(start = monStart, end = monEnd)
+        val sessSat = Session(start = satStart, end = satEnd)
+        val sessReg = Session(start = regularStart, end = regularEnd)
+
+        val state = TimeclockState(
+            sessions = listOf(sessMon, sessSat, sessReg),
+            settings = AppSettings(autoBreakDeduction = true, standardShiftHours = 10.0, cliffHours = 12.5)
+        )
+
+        assertEquals(2.75, PayrollEngine.calculateSessionOt(sessMon, state), 0.01)
+        assertEquals(4.5, PayrollEngine.calculateSessionOt(sessSat, state), 0.01)
+        assertEquals(0.0, PayrollEngine.calculateSessionOt(sessReg, state), 0.01)
+
+        val otSessions = PayrollEngine.getOtSessions(state)
+        assertEquals(2, otSessions.size)
+        assertEquals(satStart, otSessions[0].second.start)
+        assertEquals(monStart, otSessions[1].second.start)
+    }
 }

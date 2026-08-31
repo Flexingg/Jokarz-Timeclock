@@ -142,6 +142,16 @@ fun GoogleSessionLogList(
                                         )
                                     }
                                 }
+
+                                if (session.isPutInSystem) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "✓ Entered into System",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = com.randallengineering.jokarztimeclock.ui.theme.EmeraldSuccess
+                                    )
+                                }
                             }
 
                             Column(horizontalAlignment = Alignment.End) {

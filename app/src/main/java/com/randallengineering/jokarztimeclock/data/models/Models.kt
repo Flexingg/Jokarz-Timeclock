@@ -6,7 +6,8 @@ data class Session(
     val end: Long,
     val breakMs: Long = 0L,
     val note: String = "",
-    val jobCode: String = ""
+    val jobCode: String = "",
+    val isPutInSystem: Boolean = false
 )
 
 data class PtoEntry(

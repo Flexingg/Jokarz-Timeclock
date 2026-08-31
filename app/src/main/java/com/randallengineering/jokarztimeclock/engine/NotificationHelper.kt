@@ -23,8 +23,8 @@ class NotificationHelper(private val context: Context) {
         const val CHANNEL_MILESTONES_ID = "jokarz_milestones_channel"
         const val CHANNEL_MILESTONES_NAME = "Shift Milestones & Alerts"
 
-        const val CHANNEL_LIVE_ID = "jokarz_live_shift_channel"
-        const val CHANNEL_LIVE_NAME = "Live Shift Tracker"
+        const val CHANNEL_LIVE_ID = "jokarz_live_shift_island_v3"
+        const val CHANNEL_LIVE_NAME = "Live Shift Stopwatch & Tracker"
 
         const val NOTIFICATION_STANDARD_ID = 1001
         const val NOTIFICATION_CLIFF_ID = 1002
@@ -50,10 +50,12 @@ class NotificationHelper(private val context: Context) {
             val liveChannel = NotificationChannel(
                 CHANNEL_LIVE_ID,
                 CHANNEL_LIVE_NAME,
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Shows live ongoing shift tracker and remaining time"
-                setShowBadge(false)
+                description = "Shows live ongoing shift tracker and remaining time in Dynamic Island and status bar"
+                setShowBadge(true)
+                setSound(null, null)
+                enableVibration(false)
             }
 
             notificationManager.createNotificationChannel(milestoneChannel)

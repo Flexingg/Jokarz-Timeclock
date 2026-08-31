@@ -323,4 +323,44 @@ object PayrollEngine {
         val format = NumberFormat.getCurrencyInstance(Locale.US)
         return format.format(max(0.0, amount))
     }
+
+    /**
+     * Calculates overtime hours for an individual completed session.
+     * Mon-Thu: Overtime is unlocked when clocked duration reaches the cliffHours (e.g. 12.5h, 2 hours over expected 10.5h shift).
+     * Fri-Sun: All worked hours are overtime.
+     */
+    fun calculateSessionOt(session: com.randallengineering.jokarztimeclock.data.models.Session, state: TimeclockState): Double {
+        val durationMs = session.end - session.start
+        if (durationMs <= 0) return 0.0
+        val cal = Calendar.getInstance().apply { timeInMillis = session.start }
+        val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+        val clockedHours = durationMs / 3600000.0
+        val settings = state.settings
+
+        val isMonThu = dayOfWeek in Calendar.MONDAY..Calendar.THURSDAY
+        return if (isMonThu) {
+            val mealBreak = if (settings.autoBreakDeduction) settings.unpaidMealDuration else 0.0
+            val targetStandardShift = settings.standardShiftHours + mealBreak
+            if (clockedHours >= settings.cliffHours) {
+                maxOf(0.0, clockedHours - targetStandardShift)
+            } else {
+                0.0
+            }
+        } else {
+            var breakHours = session.breakMs / 3600000.0
+            if (breakHours == 0.0 && settings.autoBreakDeduction && clockedHours > settings.unpaidMealThreshold) {
+                breakHours = settings.unpaidMealDuration
+            }
+            maxOf(0.0, clockedHours - breakHours)
+        }
+    }
+
+    /**
+     * Returns all sessions in the repository that have overtime (> 0.05h) paired with their original index.
+     */
+    fun getOtSessions(state: TimeclockState): List<Pair<Int, com.randallengineering.jokarztimeclock.data.models.Session>> {
+        return state.sessions.mapIndexed { idx, s -> Pair(idx, s) }
+            .filter { (_, s) -> calculateSessionOt(s, state) > 0.05 }
+            .sortedByDescending { it.second.start }
+    }
 }

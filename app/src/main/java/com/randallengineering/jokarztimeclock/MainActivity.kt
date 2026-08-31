@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
@@ -36,6 +37,8 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
@@ -168,6 +171,11 @@ fun GoogleTimeclockScreen(
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showAnalyticsDialog by remember { mutableStateOf(false) }
     var showReportDialog by remember { mutableStateOf(false) }
+    var showOvertimeDialog by remember { mutableStateOf(false) }
+
+    val pendingOtCount = remember(state.sessions, state.settings) {
+        com.randallengineering.jokarztimeclock.engine.PayrollEngine.getOtSessions(state).count { !it.second.isPutInSystem }
+    }
 
     var selectedSessionForEdit by remember { mutableStateOf<Pair<Int, Session>?>(null) }
 
@@ -224,6 +232,40 @@ fun GoogleTimeclockScreen(
                     }
                 },
                 actions = {
+                    // Overtime System Input button with Badge
+                    BadgedBox(
+                        badge = {
+                            if (pendingOtCount > 0) {
+                                Badge(
+                                    containerColor = com.randallengineering.jokarztimeclock.ui.theme.RoseError,
+                                    contentColor = Color.White
+                                ) {
+                                    Text("$pendingOtCount", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    ) {
+                        FilledTonalIconButton(
+                            onClick = {
+                                viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
+                                showOvertimeDialog = true
+                            },
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = if (pendingOtCount > 0) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            modifier = Modifier.size(38.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.FactCheck,
+                                contentDescription = "Overtime System Input",
+                                tint = if (pendingOtCount > 0) com.randallengineering.jokarztimeclock.ui.theme.RoseError else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
                     FilledTonalIconButton(
                         onClick = {
                             val newHide = !state.settings.hideMoneyAmounts
@@ -412,7 +454,7 @@ fun GoogleTimeclockScreen(
 
             // Google Assist Action Chips
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 AssistChip(
@@ -420,12 +462,12 @@ fun GoogleTimeclockScreen(
                         viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
                         showAddShiftDialog = true
                     },
-                    label = { Text("Add Shift", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
+                    label = { Text("Add Shift", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Filled.Add,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(15.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     },
@@ -440,14 +482,43 @@ fun GoogleTimeclockScreen(
                 AssistChip(
                     onClick = {
                         viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
+                        showOvertimeDialog = true
+                    },
+                    label = {
+                        Text(
+                            text = if (pendingOtCount > 0) "OT ($pendingOtCount)" else "OT Input",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (pendingOtCount > 0) com.randallengineering.jokarztimeclock.ui.theme.RoseError else MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.FactCheck,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp),
+                            tint = if (pendingOtCount > 0) com.randallengineering.jokarztimeclock.ui.theme.RoseError else MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = if (pendingOtCount > 0) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                    ),
+                    border = null,
+                    modifier = Modifier.weight(1f)
+                )
+
+                AssistChip(
+                    onClick = {
+                        viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
                         showPtoDialog = true
                     },
-                    label = { Text("PTO / Hol", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
+                    label = { Text("PTO/Hol", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Filled.CalendarMonth,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(15.dp),
                             tint = EmeraldSuccess
                         )
                     },
@@ -464,12 +535,12 @@ fun GoogleTimeclockScreen(
                         viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
                         showReportDialog = true
                     },
-                    label = { Text("Report", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) },
+                    label = { Text("Report", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Filled.Description,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(15.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
@@ -524,8 +595,8 @@ fun GoogleTimeclockScreen(
         EditSessionDialog(
             session = session,
             onDismiss = { selectedSessionForEdit = null },
-            onSave = { start, end, note ->
-                viewModel.updateSession(idx, start, end, note)
+            onSave = { start, end, note, isPutIn ->
+                viewModel.updateSession(idx, start, end, note, isPutIn)
                 selectedSessionForEdit = null
                 showUndoSnackbar("Session updated.")
             },
@@ -540,10 +611,27 @@ fun GoogleTimeclockScreen(
     if (showAddShiftDialog) {
         AddManualShiftDialog(
             onDismiss = { showAddShiftDialog = false },
-            onSave = { start, end, note ->
-                viewModel.addManualSession(start, end, note)
+            onSave = { start, end, note, isPutIn ->
+                viewModel.addManualSession(start, end, note, isPutIn)
                 showAddShiftDialog = false
                 showUndoSnackbar("Manual shift added.")
+            }
+        )
+    }
+
+    if (showOvertimeDialog) {
+        com.randallengineering.jokarztimeclock.ui.dialogs.OvertimeSystemInputDialog(
+            state = state,
+            onDismiss = { showOvertimeDialog = false },
+            onTogglePutInSystem = { origIndex, isPutIn ->
+                viewModel.setSessionPutInSystem(origIndex, isPutIn)
+            },
+            onMarkAllPutInSystem = { indices, isPutIn ->
+                viewModel.markAllOtPutInSystem(indices, isPutIn)
+                showUndoSnackbar("Marked ${indices.size} shifts as input.")
+            },
+            onEditSession = { origIndex, session ->
+                selectedSessionForEdit = Pair(origIndex, session)
             }
         )
     }

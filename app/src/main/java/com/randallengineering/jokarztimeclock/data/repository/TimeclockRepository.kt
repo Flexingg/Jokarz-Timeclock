@@ -144,8 +144,8 @@ class TimeclockRepository(private val context: Context) {
         updateState { it.copy(currentSessionStart = newStartMs) }
     }
 
-    fun addManualSession(startMs: Long, endMs: Long, note: String = "", breakMs: Long = 0L) {
-        val newSession = Session(start = startMs, end = endMs, breakMs = breakMs, note = note)
+    fun addManualSession(startMs: Long, endMs: Long, note: String = "", breakMs: Long = 0L, isPutInSystem: Boolean = false) {
+        val newSession = Session(start = startMs, end = endMs, breakMs = breakMs, note = note, isPutInSystem = isPutInSystem)
         pushUndo(UndoAction(type = "ADD_SESSION", session = newSession))
         updateState {
             it.copy(
@@ -155,17 +155,57 @@ class TimeclockRepository(private val context: Context) {
         }
     }
 
-    fun updateSession(index: Int, startMs: Long, endMs: Long, note: String = "", breakMs: Long = 0L) {
+    fun updateSession(index: Int, startMs: Long, endMs: Long, note: String = "", breakMs: Long = 0L, isPutInSystem: Boolean? = null) {
         val sessions = _state.value.sessions.toMutableList()
         if (index in sessions.indices) {
             val old = sessions[index]
-            val updated = old.copy(start = startMs, end = endMs, note = note, breakMs = breakMs)
+            val updated = old.copy(
+                start = startMs,
+                end = endMs,
+                note = note,
+                breakMs = breakMs,
+                isPutInSystem = isPutInSystem ?: old.isPutInSystem
+            )
             pushUndo(UndoAction(type = "UPDATE_SESSION", index = index, session = updated, previousSession = old))
             sessions[index] = updated
             updateState {
                 it.copy(
                     sessions = sessions,
                     auditLog = listOf(AuditEntry(action = "EDIT_SESSION", payloadJson = gson.toJson(updated))) + it.auditLog.take(49)
+                )
+            }
+        }
+    }
+
+    fun setSessionPutInSystem(index: Int, isPutIn: Boolean) {
+        val sessions = _state.value.sessions.toMutableList()
+        if (index in sessions.indices) {
+            val old = sessions[index]
+            val updated = old.copy(isPutInSystem = isPutIn)
+            sessions[index] = updated
+            updateState {
+                it.copy(
+                    sessions = sessions,
+                    auditLog = listOf(AuditEntry(action = "TOGGLE_OT_SYSTEM_INPUT", payloadJson = "{\"index\": $index, \"isPutInSystem\": $isPutIn}")) + it.auditLog.take(49)
+                )
+            }
+        }
+    }
+
+    fun markAllOtPutInSystem(indices: List<Int>, isPutIn: Boolean) {
+        val sessions = _state.value.sessions.toMutableList()
+        var changed = false
+        for (idx in indices) {
+            if (idx in sessions.indices) {
+                sessions[idx] = sessions[idx].copy(isPutInSystem = isPutIn)
+                changed = true
+            }
+        }
+        if (changed) {
+            updateState {
+                it.copy(
+                    sessions = sessions,
+                    auditLog = listOf(AuditEntry(action = "BATCH_OT_SYSTEM_INPUT", payloadJson = "{\"count\": ${indices.size}, \"isPutInSystem\": $isPutIn}")) + it.auditLog.take(49)
                 )
             }
         }

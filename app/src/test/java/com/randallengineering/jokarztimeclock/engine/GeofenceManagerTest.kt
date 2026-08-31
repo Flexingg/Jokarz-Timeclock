@@ -23,6 +23,13 @@ class GeofenceManagerTest {
     fun setUp() {
         context = mockk(relaxed = true)
         mockkObject(PermissionHelper)
+        mockkStatic(android.util.Log::class)
+        every { android.util.Log.i(any(), any()) } returns 0
+        every { android.util.Log.d(any(), any()) } returns 0
+        every { android.util.Log.w(any(), any<String>()) } returns 0
+        every { android.util.Log.e(any(), any()) } returns 0
+        mockkStatic(com.google.android.gms.location.LocationServices::class)
+        every { com.google.android.gms.location.LocationServices.getGeofencingClient(any<Context>()) } returns mockk(relaxed = true)
     }
 
     @Test

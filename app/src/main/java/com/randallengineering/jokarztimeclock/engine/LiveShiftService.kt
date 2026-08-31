@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -36,7 +37,8 @@ class LiveShiftService : Service() {
     private lateinit var notificationManager: NotificationManager
 
     companion object {
-        const val CHANNEL_LIVE_ID = "jokarz_live_shift_channel"
+        // Updated channel ID to ensure Android/ColorOS creates it with DEFAULT/HIGH importance for Live Island capsules
+        const val CHANNEL_LIVE_ID = "jokarz_live_shift_island_v3"
         const val NOTIFICATION_LIVE_ID = 1003
 
         fun start(context: Context) {
@@ -65,13 +67,23 @@ class LiveShiftService : Service() {
 
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Delete legacy low-importance channel if present
+            try {
+                notificationManager.deleteNotificationChannel("jokarz_live_shift_channel")
+            } catch (e: Exception) {
+                // Ignore
+            }
+
+            // Importance must be at least IMPORTANCE_DEFAULT for ColorOS Aqua Dynamics / Dynamic Island / Live Alerts
             val liveChannel = NotificationChannel(
                 CHANNEL_LIVE_ID,
                 "Live Shift Stopwatch & Tracker",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Live ongoing shift chronometer and status in Android status bar"
-                setShowBadge(false)
+                description = "Live ongoing shift chronometer and status in Dynamic Island and status bar"
+                setShowBadge(true)
+                setSound(null, null) // Silent updates
+                enableVibration(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
             notificationManager.createNotificationChannel(liveChannel)
@@ -190,19 +202,32 @@ class LiveShiftService : Service() {
 
         val title = if (state.isOnBreak) "⏸️ On Lunch / Break" else "⏱️ Shift Active: ${PayrollEngine.formatDuration(elapsedMs)}"
 
+        // ColorOS Aqua Dynamics / OnePlus Fluid Cloud & Android 16 Live Activity bundle extras
+        val liveExtras = Bundle().apply {
+            putBoolean("android.substName", true)
+            putString("oplus.isLiveAlert", "true")
+            putBoolean("oplus.isLiveAlert", true)
+            putBoolean("com.oplus.notification.isLiveAlert", true)
+            putString("android.extra.ongoing_activity_type", "stopwatch")
+            putBoolean("android.promotedOngoing", true)
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_LIVE_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(statusText)
-            .setSubText("Live Shift Tracker")
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setSubText("Jokarz Live")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setShowWhen(!state.isOnBreak)
+            .setShowWhen(true)
             .setUsesChronometer(!state.isOnBreak)
             .setWhen(startMs)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(statusText))
+            .addExtras(liveExtras)
             .setContentIntent(pendingContentIntent)
             .addAction(
                 0,

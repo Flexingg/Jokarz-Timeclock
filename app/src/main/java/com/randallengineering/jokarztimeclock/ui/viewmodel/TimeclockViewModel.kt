@@ -139,13 +139,25 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
         repository.updateActiveStartTime(startMs)
     }
 
-    fun addManualSession(startMs: Long, endMs: Long, note: String) {
-        repository.addManualSession(startMs, endMs, note)
+    fun addManualSession(startMs: Long, endMs: Long, note: String, isPutInSystem: Boolean = false) {
+        repository.addManualSession(startMs, endMs, note, isPutInSystem = isPutInSystem)
         pushTaskerData()
     }
 
-    fun updateSession(index: Int, startMs: Long, endMs: Long, note: String) {
-        repository.updateSession(index, startMs, endMs, note)
+    fun updateSession(index: Int, startMs: Long, endMs: Long, note: String, isPutInSystem: Boolean? = null) {
+        repository.updateSession(index, startMs, endMs, note, isPutInSystem = isPutInSystem)
+        pushTaskerData()
+    }
+
+    fun setSessionPutInSystem(index: Int, isPutIn: Boolean) {
+        audioHaptic.playClickSound(state.value.settings.soundEnabled)
+        repository.setSessionPutInSystem(index, isPutIn)
+        pushTaskerData()
+    }
+
+    fun markAllOtPutInSystem(indices: List<Int>, isPutIn: Boolean) {
+        audioHaptic.playClickSound(state.value.settings.soundEnabled)
+        repository.markAllOtPutInSystem(indices, isPutIn)
         pushTaskerData()
     }
 

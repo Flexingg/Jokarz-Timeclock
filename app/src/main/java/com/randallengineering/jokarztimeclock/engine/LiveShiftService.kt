@@ -340,9 +340,13 @@ class LiveShiftService : Service() {
         val progressStyle = NotificationCompat.ProgressStyle()
             // Segment lengths sum to ShiftProgressScale.MAX_MINUTES, which is the bar's max.
             .setProgressSegments(plan.segmentLengths.map { NotificationCompat.ProgressStyle.Segment(it) })
-            .addProgressPoint(NotificationCompat.ProgressStyle.Point(plan.targetMark))
-            .addProgressPoint(NotificationCompat.ProgressStyle.Point(plan.cliffMark))
-            .setProgress(plan.progress)
+            // ONE point marking the current position, moving left → right from shift start to the
+            // clock-out target. Once the target is reached the shift is complete: the point is
+            // pinned at the far right and the line is full, while the overtime time and money keep
+            // updating in the content text and the chronometer keeps running.
+            // See ShiftProgressScale.pointMark.
+            .addProgressPoint(NotificationCompat.ProgressStyle.Point(plan.pointMark))
+            .setProgress(plan.barFill)
             // No tracker icon: there is no drawable for it, and the default track is enough.
             .setStyledByProgress(false)
 

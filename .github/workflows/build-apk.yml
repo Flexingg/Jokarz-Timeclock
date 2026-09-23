@@ -4,6 +4,16 @@ name: Build APK
 # has a full swap and has been OOM-killed mid-build before). Runs on every v* tag
 # and can be triggered by hand:
 #     gh workflow run build-apk.yml --repo Flexingg/Jokarz-Timeclock
+#
+# Release signing is REQUIRED here (repository secrets below). There is no debug-key
+# fallback any more: v2.8.2's CI artifact came out debug-signed because the release
+# variant silently fell back, and a debug-signed APK cannot install over the release
+# build. If the secrets are missing the release build now fails, and the verification
+# gate below would fail it anyway.
+#     KEYSTORE_BASE64     base64 -w0 of the canonical release .jks
+#     KEYSTORE_PASSWORD   keystore password
+#     KEY_ALIAS           key alias
+#     KEY_PASSWORD        key password
 
 on:
   push:
@@ -16,7 +26,7 @@ permissions:
 
 jobs:
   build:
-    name: Test and assemble
+    name: Test, assemble, verify
     runs-on: ubuntu-latest
 
     steps:
@@ -52,6 +62,22 @@ jobs:
             exit 1
           fi
 
+      # A tag whose name disagrees with versionName is how a release ends up shipping the
+      # wrong build. Compare them before anything is built.
+      - name: Check the tag against versionName
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -e
+          TAG="${GITHUB_REF_NAME#v}"
+          NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)
+          CODE=$(grep -oP 'versionCode\s*=\s*\K[0-9]+' app/build.gradle.kts | head -1)
+          echo "tag=$GITHUB_REF_NAME versionName=$NAME versionCode=$CODE"
+          if [ "$TAG" != "$NAME" ]; then
+            echo "::error::tag v$TAG does not match versionName $NAME"
+            exit 1
+          fi
+          echo "VERSION=$NAME" >> "$GITHUB_ENV"
+
       - name: Run the test suite
         env:
           GRADLE_CMD: ${{ steps.gradle_cmd.outputs.cmd }}
@@ -73,69 +99,69 @@ jobs:
           errors=$(grep -ho 'errors="[0-9]*"' "${files[@]}" | grep -o '[0-9]*' | awk '{s+=$1} END {print s+0}')
           echo "TESTS: $total executed, $failed failed, $errors errored (${#files[@]} result files)"
 
-      # Optional release signing. Set these repository secrets to release-sign:
-      #     KEYSTORE_BASE64     base64 -w0 of the .jks/.keystore file
-      #     KEYSTORE_PASSWORD   keystore password
-      #     KEY_ALIAS           key alias
-      #     KEY_PASSWORD        key password
-      # Without them the workflow still builds; it falls back to the debug-signed
-      # APK, which installs over other debug-signed builds of this app.
-      - name: Decode the signing keystore (self-disables when unset)
+      - name: Decode the release signing keystore (required)
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
+          set -e
           if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "no signing secrets configured - skipping release keystore"
-            exit 0
+            echo "::error::KEYSTORE_BASE64 is not configured - refusing to build an unsignable release"
+            exit 1
           fi
           printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
           echo "keystore written: $(stat -c %s "$RUNNER_TEMP/release.keystore") bytes"
 
-      - name: Assemble the APK
+      # No fallback to assembleDebug: a debug-signed APK is not a release artifact.
+      - name: Assemble the release APK
         env:
           GRADLE_CMD: ${{ steps.gradle_cmd.outputs.cmd }}
           KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          set -o pipefail
-          if $GRADLE_CMD assembleRelease --no-daemon --console=plain; then
-            echo "release variant built"
-          else
-            echo "::warning::assembleRelease failed (likely signing) - falling back to the debug-signed APK"
-            $GRADLE_CMD assembleDebug --no-daemon --console=plain
-          fi
+        run: $GRADLE_CMD assembleRelease --no-daemon --console=plain
 
-      # Module-agnostic, so it survives a rename of :app. Deliberately restricted to the build
-      # output tree: the repo also carries release APKs at the root for the LAN share, and
-      # matching one of those would "verify" a build that never happened.
-      - name: Verify an APK actually exists
+      # THE GATE. Module-agnostic, and deliberately restricted to the build output tree: the
+      # repo also carries release APKs at the root for the LAN share, and matching one of those
+      # would "verify" a build that never happened. Fails the job unless apksigner reports
+      # Verifies with v2+v3, the certificate is not the debug key, and the zip is intact.
+      - name: Gate - verify the built APK's signatures and archive
         run: |
           set -e
-          APK=$(find . -path ./.git -prune -o -path '*/build/outputs/apk/*' -name '*.apk' -print | head -1)
+          APK=$(find ./app/build/outputs/apk -name '*.apk' -print | head -1)
           if [ -z "$APK" ]; then
             echo "::error::no APK was produced by the build"; exit 1
           fi
-          echo "APK: $APK"
-          ls -la "$APK"
-          sha256sum "$APK"
+          chmod +x scripts/verify-apk.sh
+          scripts/verify-apk.sh "$APK"
           {
             echo "APK_PATH=$APK"
             echo "APK_NAME=$(basename "$APK")"
             echo "APK_SHA256=$(sha256sum "$APK" | cut -d' ' -f1)"
           } >> "$GITHUB_ENV"
 
+      # A stable, versioned file name for the release asset and the LAN share, plus a .sha256
+      # sidecar so the owner can check a download before installing it.
+      - name: Stage the verified APK
+        run: |
+          set -e
+          VERSION="${VERSION:-$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)}"
+          mkdir -p dist
+          cp "$APK_PATH" "dist/JokarzTimeclock-${VERSION}.apk"
+          (cd dist && sha256sum "JokarzTimeclock-${VERSION}.apk" > "JokarzTimeclock-${VERSION}.apk.sha256")
+          ls -la dist
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
       - name: Upload the APK as a build artifact
         uses: actions/upload-artifact@v4
         with:
           name: timeclock-apk
-          path: '**/build/outputs/apk/**/*.apk'
+          path: dist/*
           if-no-files-found: error
 
       - name: Attach the APK to the GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: '**/build/outputs/apk/**/*.apk'
+          files: 'dist/*'
           fail_on_unmatched_files: true

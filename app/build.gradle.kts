@@ -6,10 +6,30 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// Release signing. Kept identical for every build so the owner can install over the previous APK.
+// Release signing. There is exactly ONE key for this app and it is the same key locally and in CI,
+// so an update always installs straight over the previous build.
+//
+// Resolution order per value: environment first (CI: KEYSTORE_PATH / KEYSTORE_PASSWORD / KEY_ALIAS /
+// KEY_PASSWORD), then the gitignored keystore.properties (local builds). Neither the keystore nor
+// its password is ever committed.
 val keystoreProps = Properties().apply {
     val f = rootProject.file("keystore.properties")
     if (f.exists()) f.inputStream().use { load(it) }
+}
+
+fun signingValue(envName: String, propName: String): String? =
+    System.getenv(envName)?.takeIf { it.isNotBlank() }
+        ?: keystoreProps.getProperty(propName)?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile: String? = signingValue("KEYSTORE_PATH", "storeFile")
+val releaseStorePassword: String? = signingValue("KEYSTORE_PASSWORD", "storePassword")
+val releaseKeyAlias: String? = signingValue("KEY_ALIAS", "keyAlias")
+val releaseKeyPassword: String? = signingValue("KEY_PASSWORD", "keyPassword")
+
+/** Absolute path to the canonical release keystore, or null when it has not been configured. */
+val releaseKeystoreFile: File? = releaseStoreFile?.let { path ->
+    val f = File(path)
+    if (f.isAbsolute) f else rootProject.file(path)
 }
 
 android {
@@ -23,8 +43,8 @@ android {
         applicationId = "com.randallengineering.jokarztimeclock"
         minSdk = 26
         targetSdk = 36
-        versionCode = 14
-        versionName = "2.8.2"
+        versionCode = 15
+        versionName = "2.8.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -34,12 +54,18 @@ android {
 
     signingConfigs {
         create("release") {
-            if (keystoreProps.isNotEmpty() && keystoreProps.getProperty("storeFile") != null) {
-                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
-                storePassword = keystoreProps.getProperty("storePassword")
-                keyAlias = keystoreProps.getProperty("keyAlias")
-                keyPassword = keystoreProps.getProperty("keyPassword")
-            }
+            // Nullable on purpose. If the key is missing AGP fails the *release* build (see the
+            // guard below) instead of silently writing an unsigned or debug-signed APK - which is
+            // exactly how the v2.8.2 CI artifact came out debug-signed.
+            storeFile = releaseKeystoreFile
+            storePassword = releaseStorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
+            // All three schemes, explicitly: v1 for old installers, v2 (what the phone reported on),
+            // v3 so the signing key can be rotated in the future without another uninstall.
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
         }
     }
 
@@ -50,12 +76,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Falls back to the debug key when keystore.properties is absent (CI / fresh clone).
-            signingConfig = if (keystoreProps.isNotEmpty() && keystoreProps.getProperty("storeFile") != null) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            // Never the debug key: the release variant is only ever signed with the canonical key.
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
@@ -107,4 +129,19 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+// Fail closed. A release APK that is unsigned, partially signed, or signed with anything other than
+// the canonical key is a bug that must stop the build - v2.8.2 shipped a debug-signed CI artifact
+// because the release variant silently fell back to the debug key. There is no fallback any more.
+tasks.matching { it.name == "packageRelease" || it.name == "assembleRelease" }.configureEach {
+    doFirst {
+        val ks = releaseKeystoreFile
+        require(ks != null && ks.exists()) {
+            "Release signing key not configured - refusing to build a release APK.\n" +
+                "  resolved KEYSTORE_PATH: ${releaseStoreFile ?: "<unset>"}\n" +
+                "Set KEYSTORE_PATH/KEYSTORE_PASSWORD/KEY_ALIAS/KEY_PASSWORD (CI) or create the gitignored\n" +
+                "keystore.properties (local). See README > Release signing."
+        }
+    }
 }

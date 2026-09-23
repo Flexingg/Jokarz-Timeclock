@@ -1,7 +1,7 @@
 # ⏱️ Jokarz Timeclock (Native Jetpack Compose & Material You)
 
-[![Release](https://img.shields.io/badge/Release-v2.8.2-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.8.2)
-[![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.2.apk)
+[![Release](https://img.shields.io/badge/Release-v2.8.3-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.8.3)
+[![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.3.apk)
 [![Platform](https://img.shields.io/badge/Platform-Native%20Android%20Compose-blue.svg)](https://developer.android.com/jetpack/compose)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -14,22 +14,86 @@ itself.
 
 ## 📲 Download
 
-📥 **[JokarzTimeclock-2.8.2.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.2.apk)**
+📥 **[JokarzTimeclock-2.8.3.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.3.apk)**
 
-**LAN, from the workshop PC:** `http://192.168.1.146:4310/JokarzTimeclock-2.8.2.apk`
+**LAN, from the workshop PC:** `http://192.168.1.146:4310/JokarzTimeclock-2.8.3.apk`
+(the same directory serves `JokarzTimeclock-2.8.3.apk.sha256` — check it, see below)
 
 > **Install**: copy the `.apk` to the phone and tap it (allow *Install unknown apps* if asked).
 >
-> **Signing — no uninstall needed.** v2.8.2 is signed with the **same release key as v2.8.1, v2.8.0
-> and v2.7.0**, so it installs straight over the top and your shift history stays intact.
-> * Certificate DN: `CN=Jokarz Engineering, OU=Engineering, O=Randall Engineering`
-> * SHA-256: `8aeb00392caa86d8565e7724738a27f514bfa688d201216fb63d42824f4013c3`
-> * SHA-1: `583e47a8eeb0497a2bc28fd9655fd27c79f47df4`
+> ### ⚠️ This release needs ONE uninstall first — then never again
 >
-> **No signature change ⇒ no uninstall, no data loss.** Only builds **up to v2.6.1** used a different
-> (debug) key: if you are still on one of those, Android will refuse the install with *"App not
-> installed"* and you must uninstall once (which removes the local shift database) — export a backup
-> from v2.8.0 onwards and it will never be a problem again. From v2.7.0 on, the key is fixed.
+> v2.8.3 is the first build signed with the app's **single canonical release key** (RSA 4096, valid
+> to 2054). Android will not mix signing keys, so the *first* v2.8.3 install must be a clean one:
+> **uninstall the current app, install v2.8.3, then import a backup** (Settings ▸ Backup & Restore —
+> export it from the old build first). From v2.8.3 onwards every update installs **in place**, over
+> the top, with the shift history kept.
+>
+> * Certificate DN: `CN=Jokarz Engineering, OU=Engineering, O=Randall Engineering`
+> * **Certificate SHA-256: `c91e46ff61c7c5c0e61bb3dc37e4477341df68f2041f633b9c055a8e74ea8212`**
+> * `versionCode` increments every release (14 → 15 here); the app shows its own build on screen
+>   (Settings footer) and in the notification's sub-text, so a screenshot proves what is installed.
+>
+> ### ✅ Check the download before you install it (why this matters)
+>
+> v2.8.2's install failed with
+> `INSTALL_PARSE_FAILED_NO_CERTIFICATES … using APK Signature Scheme v2: SHA-256 digest of contents did not verify`.
+> That message means one thing: **the file on the phone was not byte-for-byte the file that was
+> signed** (a byte-level-corrupted download — not a missing signature, and not a truncation, which
+> gives a different error). The published v2.8.2 APK itself was fine. So from v2.8.3 on:
+>
+> 1. every release publishes a `.apk.sha256` next to the APK, and
+> 2. a **release gate** refuses to publish an APK that does not verify (`scripts/verify-apk.sh`,
+>    run locally *and* in CI — see [Building and testing](#️-building-and-testing)).
+>
+> On a PC: `sha256sum JokarzTimeclock-2.8.3.apk` and compare with the `.sha256` file (or the value in
+> the release notes). On the phone, the safest route is the **LAN link above** — a browser download
+> that gets interrupted or resumed is the classic way an APK arrives subtly corrupted.
+
+---
+
+## 🆕 v2.8.3 — an APK that installs, updates that install *over* the old build, one progress dot
+
+### 1. The install failure, diagnosed and closed off
+`INSTALL_PARSE_FAILED_NO_CERTIFICATES … using APK Signature Scheme v2: SHA-256 digest of contents did
+not verify` does not mean the signature is missing — it means the bytes on the phone were not the
+bytes that were signed. Reproduced exactly, on a real Android runtime, by flipping **one byte** in
+the middle of an otherwise perfect APK (a damaged/interrupted download), while truncating the same
+APK produces a *different* error (`INSTALL_PARSE_FAILED_NOT_APK`). So the fix is threefold:
+
+* **The release build can no longer produce a debug-signed or unsigned APK.** Previously, if
+  `keystore.properties` was absent (e.g. in CI), the release variant silently fell back to the
+  **debug key** — which installs nowhere an already-installed release build. That fallback is gone:
+  a release build now **fails** rather than signing with the wrong key.
+* **One canonical key, used locally and in CI** (`/home/hermes/secrets`, never committed; the CI
+  secrets carry the same keystore). v1 + v2 + v3 signing are all enabled explicitly.
+* **A standing release gate** (`scripts/verify-apk.sh`) runs `apksigner verify --verbose --print-certs`
+  plus `unzip -t`, refuses a debug-signed APK, and **fails the build/release** if verification does
+  not pass. It prints the certificate fingerprint every time. CI runs it before anything is uploaded
+  or attached to a release, and every release now ships a `.apk.sha256` sidecar.
+
+### 2. The status-bar progress line has ONE dot now
+It used to draw two points (the clock-out target and the overtime cliff). It now draws a **single
+point marking where you are now**, moving left → right as the shift runs, and the filled line is your
+progress through the shift (start → clock-out target):
+
+* before/at the start → the dot sits at the left end;
+* mid-shift → the dot is at the elapsed time, strictly between the start and the target;
+* **at or past the clock-out target (overtime) → the line is full and the dot is pinned at the right
+  end**, while the overtime hours and money keep updating in the text and the system-drawn timer
+  keeps running. (The target and cliff still exist — they are the *segment* boundaries that colour
+  the paid / banking-buffer / overtime zones.)
+
+The position comes from a pure function, `ShiftProgressScale.pointMark(elapsedMs, targetHours)`,
+covered by 10 unit tests (before the shift, at the start, mid-shift, one minute before the target,
+exactly at the target, in overtime, and monotonic never-backwards) — and mutation-proved: reversing
+the interpolation makes the suite fail.
+
+### 3. Proof, not claims
+Everything above was checked against the **built APK and a real Android 15 image**: the release APK
+installs, the previous build's APK installs over it in place (`Success`, no uninstall), the
+debug-signed artifact is refused with `INSTALL_FAILED_UPDATE_INCOMPATIBLE` (the exact reason the
+debug fallback had to go), and a corrupted copy is refused with the owner's exact v2 digest error.
 
 ---
 
@@ -639,10 +703,37 @@ echo "sdk.dir=$HOME/android-sdk" > local.properties
 # Unit tests (pure JVM — no device needed)
 $GRADLE_HOME/bin/gradle --no-daemon testReleaseUnitTest
 
-# Installable APK
+# Installable APK (only builds if the release signing key is configured — see below)
 $GRADLE_HOME/bin/gradle --no-daemon assembleRelease
 # -> app/build/outputs/apk/release/app-release.apk
+
+# THE RELEASE GATE — run this on the artifact before it goes anywhere
+scripts/verify-apk.sh app/build/outputs/apk/release/app-release.apk \
+  c91e46ff61c7c5c0e61bb3dc37e4477341df68f2041f633b9c055a8e74ea8212   # expected cert (optional)
 ```
+
+### 🔐 Release signing (one key, everywhere)
+
+* **One canonical keystore**, outside the repo and never committed:
+  `/home/hermes/secrets/jokarz-timeclock-release.jks` (RSA 4096, valid ~27 years, alias
+  `jokarz-timeclock`), with its password in the sibling `…jks.password` — both `chmod 600`.
+* The Gradle release config reads, **in this order**, `KEYSTORE_PATH` / `KEYSTORE_PASSWORD` /
+  `KEY_ALIAS` / `KEY_PASSWORD` from the environment (that is what CI uses, from the repository
+  secrets of the same names) and then the gitignored `keystore.properties` (local builds).
+* `enableV1Signing` + `enableV2Signing` + `enableV3Signing` are all on. Note for whoever reads the
+  gate output next: **`Verified using v1 scheme: false` is a reporting artefact of apksigner** — it
+  stops *checking* v1 from `minSdkVersion` 24 up because the platform ignores v1 there. Re-run it
+  with `--min-sdk-version 23` and it reports v1 as `true`. The gate does that automatically.
+* **There is no debug-key fallback any more.** If the key is missing, `assembleRelease` **fails**
+  (`:app:packageRelease FAILED … refusing to build a release APK`) instead of writing an APK that
+  cannot install over the existing app. That fallback is exactly how v2.8.2's CI artifact came out
+  debug-signed.
+* **The gate** (`scripts/verify-apk.sh`) is the standing rule for every APK produced or published:
+  `apksigner verify --verbose --print-certs` (must report `Verifies`, v2 **and** v3 present, and not
+  the debug certificate) plus `unzip -t` for archive integrity, and it prints the certificate
+  fingerprint. It runs locally before a release and in `.github/workflows/build-apk.yml` before
+  anything is uploaded or attached, and it exits non-zero to fail the build. Each release also
+  publishes a `.apk.sha256` sidecar so a download can be checked byte-for-byte.
 
 * Gradle **must** be run with `--no-daemon` on the build machine (memory constrained; a previous run
   here died to an OOM kill). One Gradle command at a time.
@@ -652,11 +743,13 @@ $GRADLE_HOME/bin/gradle --no-daemon assembleRelease
   `setRequestPromotedOngoing`) refuses to build on AGP below 8.9.1.
 * `compileSdk = 36` / `targetSdk = 36` — API 36 is the first level that *has*
   `Notification.ProgressStyle`, `setShortCriticalText` and `NotificationManager.canPostPromotedNotifications()`.
-* Signing reads `keystore.properties` (store file, alias, passwords). **Neither the keystore nor its
-  password file is committed any more** — they are gitignored, because committing a signing key with its
-  password is a bad habit even for a private app. Without `keystore.properties` the build falls back to
-  the debug key (fine for testing, useless for an update over an existing install).
-* Test suite: **106 tests, 0 failures** (96 in v2.8.0 + 10 for the Tasker profile export):
+* Signing reads the environment first (`KEYSTORE_PATH` / `KEYSTORE_PASSWORD` / `KEY_ALIAS` /
+  `KEY_PASSWORD`) and then the gitignored `keystore.properties`. **Neither the keystore nor its
+  password file is committed** — the canonical key lives at
+  `/home/hermes/secrets/jokarz-timeclock-release.jks` and CI gets it from the repository secrets.
+  There is **no debug-key fallback**: a release build without the key fails.
+* Test suite: **188 tests per variant, 376 executed across debug+release, 0 failures** (v2.8.2 was
+  178 per variant; v2.8.3 adds `ShiftProgressScaleTest` +10 and changes no existing test):
 
   | Suite | Tests | Covers |
   | --- | --- | --- |
@@ -675,6 +768,13 @@ $GRADLE_HOME/bin/gradle --no-daemon assembleRelease
   | `ui/theme/ShapeGeometryTest` | 11 | squircle/cookie/wave geometry and morph resampling |
   | `ui/theme/MotionSpecTest` | 4 | the confirmation timeline |
   | `ui/theme/TimerContrastTest` | 1 | the timer keeps its contrast |
+  | `engine/ShiftProgressScaleTest` | 10 | **v2.8.3**: the single "you are here" progress point and the bar fill — before the shift, at the start, mid-shift, one minute before the target, exactly at the target, in overtime, and monotonic (never moves backwards) |
+
+* **v2.8.3 mutation proof for the progress point** — the interpolation in
+  `ShiftProgressScale.pointMark` was flipped (the dot travelling right → left); **3 tests failed**
+  (`pointNeverMovesBackwards`, `midShift_pointIsElapsedMinutes`, `oneMinuteBeforeTarget_stillShortOfEnd`),
+  then the file was restored from a `/tmp` copy with the sha256 verified back
+  (`cacad89f…` before and after) and the suite went green again.
 
 * **Guards were mutation-proved, not assumed** — the production code was deliberately broken, the
   relevant test was watched to fail, and the file was restored from a `/tmp` copy (never `git checkout`):

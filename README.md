@@ -1,7 +1,7 @@
 # ⏱️ Jokarz Timeclock (Native Jetpack Compose & Material You)
 
-[![Release](https://img.shields.io/badge/Release-v2.8.1-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.8.1)
-[![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.1.apk)
+[![Release](https://img.shields.io/badge/Release-v2.8.2-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.8.2)
+[![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.2.apk)
 [![Platform](https://img.shields.io/badge/Platform-Native%20Android%20Compose-blue.svg)](https://developer.android.com/jetpack/compose)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -14,12 +14,14 @@ itself.
 
 ## 📲 Download
 
-📥 **[JokarzTimeclock-2.8.1.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.1.apk)**
+📥 **[JokarzTimeclock-2.8.2.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.2.apk)**
+
+**LAN, from the workshop PC:** `http://192.168.1.146:4310/JokarzTimeclock-2.8.2.apk`
 
 > **Install**: copy the `.apk` to the phone and tap it (allow *Install unknown apps* if asked).
 >
-> **Signing — no uninstall needed.** v2.8.1 is signed with the **same release key as v2.8.0 and
-> v2.7.0**, so it installs straight over the top and your shift history stays intact.
+> **Signing — no uninstall needed.** v2.8.2 is signed with the **same release key as v2.8.1, v2.8.0
+> and v2.7.0**, so it installs straight over the top and your shift history stays intact.
 > * Certificate DN: `CN=Jokarz Engineering, OU=Engineering, O=Randall Engineering`
 > * SHA-256: `8aeb00392caa86d8565e7724738a27f514bfa688d201216fb63d42824f4013c3`
 > * SHA-1: `583e47a8eeb0497a2bc28fd9655fd27c79f47df4`
@@ -28,6 +30,71 @@ itself.
 > (debug) key: if you are still on one of those, Android will refuse the install with *"App not
 > installed"* and you must uninstall once (which removes the local shift database) — export a backup
 > from v2.8.0 onwards and it will never be a problem again. From v2.7.0 on, the key is fixed.
+
+---
+
+## 🆕 v2.8.2 — your old CSV imports, the chip counts down, and the UI is canonically expressive
+
+### 1. Import an old payroll CSV (the 24 shifts that were stranded)
+
+Your old export — the `Date,Day,Start Time,End Time,Break (Mins),Tech Duration (Hours),Tech Duration
+(Formatted),Notes` "Transfer Dock" file — now imports.
+
+**Settings ▸ IMPORT AN OLD PAYROLL CSV ▸ Choose CSV file** → pick the file → read the preview → **Merge**
+or **Replace**. Nothing is written until you tap the button.
+
+* **All 24 of your shifts import.** Split-shift days (both entries on 2026-09-08 and both on
+  2026-09-22) stay as two entries, and the 2-minute and 3-minute geofence blips are imported rather
+  than quietly dropped.
+* **Durations are recalculated from the start and end times.** The `Tech Duration (Hours)` and
+  `Tech Duration (Formatted)` columns are *never* used as the duration — they are someone else's
+  derived output. They are read only to cross-check, which is how the odd row gets caught.
+* **Your `Auto Clock Out via Geofence` notes come through verbatim.**
+* **The preview lists every entry and every flag first.** One row is flagged:
+  **2026-09-21**. The file says that shift lasted **34h 36m**, but `05:23:55` to `16:00:44` is
+  **10h 36m** — the export only gets 34h 36m if the clock-out was the *next* day, and only its derived
+  column says so. So the app imports what the start and end times actually say (**10h 36m**), shows you
+  the flag in plain language, and leaves the correction to you: **Edit Shift** on that row and set the
+  end to 22 Sep 16:00 if the export was right. Nothing is silently "corrected" either way.
+* **Replace vs merge is stated before it happens**, in the planner's own words.
+* **It is all-or-nothing.** One unreadable row refuses the whole file and touches nothing, and the
+  write goes through the same atomic path as a backup restore (temp file + `fsync` + rename), so a
+  failed import cannot half-apply.
+* Tolerant of real files: quoted fields, CRLF or LF, a UTF-8 BOM, a trailing newline, blank lines,
+  unknown extra columns, differently-cased headers, a missing `Notes` column, `HH:mm` as well as
+  `HH:mm:ss`, and a clock-out at or before the clock-in (read as the next day, and flagged).
+
+### 2. The live chip: when you can go home, and what the overtime is paying
+
+The chip still uses the **system-drawn timer** — no per-second re-posting, which is what broke it in
+2.6.x. Two additions:
+
+* **A live countdown to clock-out.** The system draws it (`setChronometerCountDown(true)` +
+  `setWhen(clock-out)`), so Android animates it with **no app wakeups at all**. The clock-out target
+  comes from your existing settings (`standardShiftHours` + the unpaid meal, less the week's banked
+  hours Mon–Thu) — the same maths as the on-screen "Standard Shift: … remaining" pill, so the two
+  cannot disagree. Once the target passes, the timer goes back to counting elapsed time.
+* **Live overtime money.** The content line shows `Elapsed 13h 0m • OT 2.5h • $155.00 • Out 3:40 PM`.
+  **Be honest about the mechanism:** Android can animate *time* but not a *string*, so the money has to
+  be re-posted by the app. It is refreshed **once per wall-clock minute**, on the minute (plus a single
+  wakeup at the clock-out instant), and only when the text actually changed — a `delay()` of anything
+  under 60 s now **fails the build**. Turn off "hide money amounts" to see the figure; the rate is the
+  gross/net rate you already set on the main screen, at the overtime multiplier from Settings.
+
+### 3. Canonical Material 3 Expressive
+
+* The hero's hand-drawn progress arc is replaced by the official **`CircularWavyProgressIndicator`** —
+  the documented expressive **wiggle** is the component's own animated wave amplitude
+  (`WavyProgressIndicatorDefaults.indicatorAmplitude`), not something invented here. Reduced motion
+  (Developer options ▸ *Remove animations*) flattens it.
+* Primary actions use the official **`MaterialShapes`**: clock-in is `Cookie9Sided`, clock-out is
+  `Square`, the wide lunch/pause button is `Pill` (a `Circle` would stretch into an ellipse in a wide
+  button — the classic `toShape()` trap).
+* The theme is now **`MaterialExpressiveTheme`** with `MotionScheme.expressive()`; light is still the
+  default, dark/AMOLED/dynamic still work, and **the timer digits remain raw, unanimated text** at the
+  same size and contrast — motion never delays reading the state.
+* `material3` is pinned to **1.5.0-alpha10** ahead of the Compose BOM: 1.4.0 has no `MaterialShapes`
+  and no wavy indicator, and 1.3.1 has no expressive API at all.
 
 ---
 
@@ -135,20 +202,24 @@ depends on extras that never existed.
 ```kotlin
 .setOngoing(true)
 .setRequestPromotedOngoing(true)   // Android 16: ask the OS to promote this to a Live Update
-.setWhen(sessionStartInstant)      // absolute clock-in instant, read back from storage
-.setUsesChronometer(true)          // SystemUI animates the elapsed value itself
+.setWhen(clockOutInstant)          // v2.8.2: the clock-out target while it is still ahead…
+.setChronometerCountDown(true)     // …so SystemUI animates a live countdown itself
+.setUsesChronometer(true)          // (falls back to the elapsed counter once the target passes)
 .setStyle(NotificationCompat.ProgressStyle()…)   // session progress: shift → bank buffer → overtime
-.setSubText("Jokarz Timeclock v2.8.1")           // the build, so a screenshot proves what is installed
+.setSubText("Jokarz Timeclock v2.8.2")           // the build, so a screenshot proves what is installed
 ```
 
-**Nothing in the app ticks the clock.** There is no per-second (or any other periodic) re-post of the
-notification, and the service contains no sleep/poll loop at all — the notification is posted only
-when (a) the service starts, or (b) the stored state actually changes (clock in/out, break toggle,
-editing the running start, or the setting being toggled). Those are events, not timers. The subtitle
-is a segment label ("Started 6:02 AM • 10.5h target") rather than a countdown, precisely so it stays
-truthful without any app-side updating. A unit test (`NoPeriodicNotificationUpdateTest`) reads these
-source files and **fails the build** if a `Handler`/`postDelayed`/`Timer`/`AlarmManager`/`delay()`-style
-re-post path is ever reintroduced — the 2.6.x behaviour cannot come back silently.
+**Nothing in the app ticks the clock.** The visible timer — countdown or elapsed — is drawn and
+animated by SystemUI from `when`; there is no per-second (or sub-minute) re-post of the notification.
+Since v2.8.2 there is exactly **one coarse app-side refresh**: because Android can animate *time* but
+not a *string*, the overtime money and the elapsed minutes in the content line have to be re-posted by
+the app. That refresh waits for the **next wall-clock minute boundary** (plus a single wakeup at the
+clock-out instant so the chip flips from countdown to elapsed on time), re-posts **only when the
+rendered text actually changed**, and stops with the service. A unit test
+(`NoPeriodicNotificationUpdateTest`) reads these source files and **fails the build** if a
+`Handler`/`postDelayed`/`Timer`/`AlarmManager`-style loop returns, or if any `delay()` is shorter than
+60 s — `delay(1000)`, `delay(1_000L)`, `delay(16)` and `delay(someVariable)` all fail it, naming the
+line. The 2.6.x behaviour cannot come back silently.
 
 ### The eight requirements for promotion — all met, and all verified inside the built APK
 
@@ -261,8 +332,8 @@ the main screen header, the bottom of Settings, and the notification's sub-text.
 
 ### ✅ Full checklist to confirm on the phone
 
-1. Install v2.8.1 over v2.8.0 — **no uninstall needed**, it is signed with the same key (see the
-   fingerprint in *Download*). The version string in the header must read **v2.8.1 (build 13)**
+1. Install v2.8.2 over v2.8.1 — **no uninstall needed**, it is signed with the same key (see the
+   fingerprint in *Download*). The version string in the header must read **v2.8.2 (build 14)**
    before you judge anything else.
 2. Steps A1–A4 above, then B5–B8.
 3. Watch the status bar for a minute: the seconds must advance with the phone untouched.
@@ -275,6 +346,19 @@ the main screen header, the bottom of Settings, and the notification's sub-text.
    elapsed time, because the start instant is read from storage.
 8. Edit a shift to 22:00 → 06:00 the next morning and confirm it saves with a duration of 8h 00m and
    the inline error appears if you try to set the stop before the start.
+9. **Clock-out countdown (v2.8.2).** Clock in on a Mon–Thu morning. The chip's timer must count
+   **down** to your target clock-out, and the content line must read `Elapsed … • Out 3:40 PM`. Check
+   that "Out …" matches the *Standard Shift: … remaining* pill on the main screen.
+10. **Live overtime money (v2.8.2).** Once you are past the 12.5h cliff, the content line grows an
+    `OT 2.5h • $155.00` segment. Watch it for two or three minutes: it must step **on the minute**,
+    not every second. Turn *hide money amounts* on and it disappears.
+11. **Import your old CSV (v2.8.2).** Settings ▸ *IMPORT AN OLD PAYROLL CSV* ▸ *Choose CSV file* ▸
+    pick your export. The preview must show 24 entries, both 2026-09-08 rows, both 2026-09-22 rows,
+    the `Auto Clock Out via Geofence` notes, and a red **2026-09-21** flag. Pick **Merge**, tap
+    **Merge**, and confirm your shift list grows by 24 and nothing else (rate, settings, PTO) moved.
+12. **Import safety (v2.8.2).** Re-import the same file with **Merge** again: it must say 0 new and 0
+    updated, not 48 shifts. Then truncate a copy of the file mid-row and import it: it must refuse
+    with a reason and leave your shifts exactly as they were.
 
 ---
 
@@ -284,11 +368,16 @@ the main screen header, the bottom of Settings, and the notification's sub-text.
 * **Date + time editing** with validation and overnight support — see above.
 * **Backup & Restore** — a versioned, checksummed export that imports back with a validated,
   atomic, replace-or-merge choice — see [Backup & Restore](#-backup--restore-export-that-you-can-actually-import).
-* **Expressive Material 3 UI** — squircle/cookie/wavy custom shapes, spring-shaped hero morphs on
-  clock in/out, a confirmation burst, counting totals and haptic feedback on the primary action. The
-  live timer is deliberately left as plain, unanimated, high-contrast text — a fun shape must never
-  make the timer harder to read.
-* **The build identifies itself** — "Jokarz Timeclock v2.8.1 (build 13)" on the main screen, in
+* **Canonical Material 3 Expressive UI** — the official `CircularWavyProgressIndicator` (its own
+  animated wave is the expressive "wiggle"), official `MaterialShapes` buttons (cookie clock-in,
+  square clock-out, pill lunch/pause) and `MaterialExpressiveTheme` with
+  `MotionScheme.expressive()`. The live timer is deliberately left as plain, unanimated,
+  high-contrast text — a fun shape must never make the timer harder to read, and no motion ever
+  delays reading the current state.
+* **Old payroll CSV import** — bring a legacy `Transfer Dock`-style export in (Settings ▸ *Import an
+  old payroll CSV*), with a full pre-import preview, plain-language flags for implausible rows, a
+  replace-or-merge choice stated before it applies, and an all-or-nothing atomic write.
+* **The build identifies itself** — "Jokarz Timeclock v2.8.2 (build 14)" on the main screen, in
   Settings and in the notification's sub-text, read from `BuildConfig`, so a stale install cannot
   masquerade as a bug.
 * **Precision payroll**: Mon–Thu 10.0h salary base, automatic 30-min meal after 4h, 10.5–12.5h unpaid
@@ -476,6 +565,68 @@ The pre-2.8.1 file was `app/src/main/assets/jokarz_timeclock_tasker_profile.txt`
 * **Older files still work.** An export made by **v2.7.0** (a bare state JSON with no envelope) is
   accepted as a *legacy* backup with a warning that it carries no checksum. A file from a **newer**
   version is refused with "update the app first" rather than being half-understood.
+
+---
+
+## 📄 Importing an old payroll CSV (your stranded 24 shifts)
+
+A backup is only useful for the app's *own* exports. If your history lives in a payroll/timesheet
+system's CSV — the `Transfer Dock` export, for example — that file used to be unreadable by the app.
+Now it imports.
+
+**Settings ▸ IMPORT AN OLD PAYROLL CSV ▸ Choose CSV file.**
+
+### The format it reads
+
+```
+Date,Day,Start Time,End Time,Break (Mins),Tech Duration (Hours),Tech Duration (Formatted),Notes
+"2026-08-24","Mon","05:10:00","15:12:07",0,10.04,"10h 2m",""
+```
+
+* Required columns: **`Date`**, **`Start Time`**, **`End Time`**. Everything else is optional.
+* Column names are matched **case-insensitively** and unknown extra columns are ignored, so a file
+  with a `Site Code` or `Cost Centre` column still works, and a file with no `Notes` column still works.
+* `Date` is `yyyy-MM-dd`; times are `HH:mm:ss` or `HH:mm`.
+* Tolerated: quoted fields (including embedded commas and `""` escapes), **CRLF or LF**, a **UTF-8
+  BOM**, a trailing newline, blank lines, and a clock-out at or before the clock-in (read as the
+  **next calendar day** and flagged, never as a negative shift).
+
+### The three rules that protect your numbers
+
+1. **Duration is always recomputed from `Start Time` and `End Time`.** The export's
+   `Tech Duration (Hours)` / `Tech Duration (Formatted)` columns are *derived output* and are never
+   used as the duration — that would import someone else's rounding bugs. They are read only as a
+   cross-check, and a disagreement of more than an hour raises a flag.
+2. **Nothing is merged, deduped or dropped.** Two entries on one day stay two entries; a 2-minute
+   geofence artifact becomes a 2-minute entry, flagged, not discarded; and any overlap between two
+   entries (or between an entry and a shift you already have, under *Merge*) is called out because it
+   would otherwise be paid twice.
+3. **Anomalies are flagged, never silently corrected.** Your **2026-09-21** row is the example: the
+   file claims **34h 36m**, but `05:23:55`–`16:00:44` is **10h 36m**. The preview says so in plain
+   language — *"the file says this shift lasted 34h 36m (34.61 h), but 05:23:55 to 16:00:44 is 10h 36m
+   — you probably missed a clock-out"* — imports the row, and leaves the decision to you. If the export
+   was right and you clocked out at **16:00:44 on 22 Sep**, use **Edit Shift** to move the end date and
+   the app will store the 34h 36m correctly.
+
+### What the preview shows before anything is written
+
+The file name; how many entries will be imported and how many need a look; the **Replace / Merge**
+chooser with the consequence of the selected mode spelled out in the planner's own sentence (and what
+a CSV import deliberately does *not* touch — your rates, settings, PTO and any running shift, because
+the file holds none of them); every flag; and **every single entry** with its date, start, end,
+recomputed duration, break, source line number and note.
+
+### It is all-or-nothing
+
+* One unreadable row — a truncated line, a bad date, a non-numeric break, a missing header — **refuses
+  the whole file** with the line number, and touches nothing. There is no partial import.
+* The file is decoded as **strict UTF-8** (a binary file is refused rather than silently turned into
+  `?` marks) and capped at 5 MB.
+* The accepted import goes through the **same atomic path as a backup restore**: temp file, `fsync`,
+  rename, and the in-memory state changes only after the rename succeeded. If the write fails you get
+  *"CSV import refused — it could not be saved, so your data was not changed."*
+* Entries get **deterministic ids**, so importing the same file twice under *Merge* reports **0 added,
+  0 updated** instead of duplicating your history.
 
 ---
 

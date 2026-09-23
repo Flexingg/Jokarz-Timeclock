@@ -16,7 +16,28 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 
-class TimeclockRepository(private val context: Context) {
+/**
+ * Single source of truth for the app's persisted state (JSON in `filesDir`).
+ *
+ * A **process-wide singleton**: the UI ViewModel, the live-shift foreground service and the
+ * geofence/Tasker receiver must all observe the *same* [MutableStateFlow], otherwise a clock-in made
+ * by a geofence (or a break toggled from the notification) would be invisible to the other
+ * components until the process restarted.
+ */
+class TimeclockRepository private constructor(private val context: Context) {
+
+    companion object {
+        @Volatile
+        private var shared: TimeclockRepository? = null
+
+        /** The process-wide instance. */
+        fun get(context: Context): TimeclockRepository {
+            return shared ?: synchronized(this) {
+                shared ?: TimeclockRepository(context.applicationContext).also { shared = it }
+            }
+        }
+    }
+
 
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
     private val stateFile: File = File(context.filesDir, "timeclock_state_v2.json")

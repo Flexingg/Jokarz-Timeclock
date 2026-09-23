@@ -18,7 +18,7 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        val repository = TimeclockRepository(context)
+        val repository = TimeclockRepository.get(context)
         val notificationHelper = NotificationHelper(context)
         val taskerBridge = TaskerBridge(context)
 
@@ -28,6 +28,8 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                 val state = repository.state.value
                 if (!state.isClockedIn) {
                     repository.clockIn()
+                    // Keep the status bar chip in step with an automatic clock-in.
+                    if (repository.state.value.settings.liveNotificationEnabled) LiveShiftService.start(context)
                     notificationHelper.showGeofenceNotification(
                         title = "Auto Clocked In 📍",
                         message = "Tasker location trigger detected — shift started."
@@ -40,6 +42,7 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                 val state = repository.state.value
                 if (state.isClockedIn) {
                     repository.clockOut(note = "Auto Clock Out via Tasker")
+                    LiveShiftService.stop(context)
                     notificationHelper.showGeofenceNotification(
                         title = "Auto Clocked Out 📍",
                         message = "Tasker location trigger detected — shift ended."
@@ -62,6 +65,8 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                     Geofence.GEOFENCE_TRANSITION_ENTER -> {
                         if (!state.isClockedIn) {
                             repository.clockIn()
+                            // Keep the status bar chip in step with an automatic clock-in.
+                            if (repository.state.value.settings.liveNotificationEnabled) LiveShiftService.start(context)
                             notificationHelper.showGeofenceNotification(
                                 title = "Auto Clocked In 📍",
                                 message = "Welcome to work! Shift started automatically via Geofence."
@@ -72,6 +77,7 @@ class GeofenceBroadcastReceiver : BroadcastReceiver() {
                     Geofence.GEOFENCE_TRANSITION_EXIT -> {
                         if (state.isClockedIn) {
                             repository.clockOut(note = "Auto Clock Out via Geofence")
+                            LiveShiftService.stop(context)
                             notificationHelper.showGeofenceNotification(
                                 title = "Auto Clocked Out 📍",
                                 message = "You have left the work area. Shift completed automatically."

@@ -96,6 +96,10 @@ truthful without any app-side updating.
   the app on the main screen.
 * ColorOS "Aqua Dynamics"/Fluid Cloud and Android 16 promoted-ongoing capsule extras are attached so
   the chip can also appear as a stopwatch capsule on the Oppo.
+* **One shared state object**: `TimeclockRepository` is now a process-wide singleton, so a clock-in
+  performed by the geofence/Tasker receiver or a break toggled from the notification is immediately
+  visible to the UI *and* to the service. Geofence/Tasker clock-in also starts the chip, and
+  auto-clock-out stops it.
 
 ### Permissions declared, and why
 

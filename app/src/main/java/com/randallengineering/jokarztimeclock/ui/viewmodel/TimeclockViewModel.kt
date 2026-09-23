@@ -28,7 +28,7 @@ import java.util.Calendar
 
 class TimeclockViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = TimeclockRepository(application)
+    private val repository = TimeclockRepository.get(application)
     val state: StateFlow<TimeclockState> = repository.state
 
     val audioHaptic = AudioHapticEngine(application)

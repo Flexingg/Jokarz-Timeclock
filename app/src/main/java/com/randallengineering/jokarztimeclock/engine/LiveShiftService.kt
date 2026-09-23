@@ -100,7 +100,7 @@ class LiveShiftService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        repository = TimeclockRepository(applicationContext)
+        repository = TimeclockRepository.get(applicationContext)
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createChannel()
     }

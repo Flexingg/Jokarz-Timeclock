@@ -57,6 +57,22 @@ jobs:
           GRADLE_CMD: ${{ steps.gradle_cmd.outputs.cmd }}
         run: $GRADLE_CMD test --no-daemon --console=plain
 
+      # Gradle only prints "N tests completed" when something fails, so record the count on
+      # green runs too. Never fails the job - it is reporting, not gating.
+      - name: Summarise the test count
+        if: always()
+        run: |
+          shopt -s nullglob
+          files=(app/build/test-results/*/TEST-*.xml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "no test result XML found - nothing to summarise"
+            exit 0
+          fi
+          total=$(grep -ho 'tests="[0-9]*"' "${files[@]}" | grep -o '[0-9]*' | awk '{s+=$1} END {print s+0}')
+          failed=$(grep -ho 'failures="[0-9]*"' "${files[@]}" | grep -o '[0-9]*' | awk '{s+=$1} END {print s+0}')
+          errors=$(grep -ho 'errors="[0-9]*"' "${files[@]}" | grep -o '[0-9]*' | awk '{s+=$1} END {print s+0}')
+          echo "TESTS: $total executed, $failed failed, $errors errored (${#files[@]} result files)"
+
       # Optional release signing. Set these repository secrets to release-sign:
       #     KEYSTORE_BASE64     base64 -w0 of the .jks/.keystore file
       #     KEYSTORE_PASSWORD   keystore password

@@ -798,6 +798,20 @@ fun GoogleTimeclockScreen(
                 scope.launch {
                     snackbarHostState.showSnackbar(applied?.let { "Imported. " + it.summary } ?: "Import failed — your data was not changed.")
                 }
+            },
+            onPlanCsvImport = { parsed, mode -> viewModel.planCsvImport(parsed, mode) },
+            onConfirmCsvImport = { parsed, mode ->
+                val applied = viewModel.importCsv(parsed, mode)
+                // Closed for the same reason as a backup import, and so the new shifts are in view.
+                showSettingsDialog = false
+                if (applied != null) importConfirmations++
+                val n = parsed.entries.size
+                android.widget.Toast.makeText(
+                    context,
+                    if (applied != null) "Imported $n ${if (n == 1) "shift" else "shifts"} from the CSV."
+                    else "CSV import refused — it could not be saved, so your data was not changed.",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
             }
         )
     }

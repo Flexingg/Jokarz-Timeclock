@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.location.Location
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -74,6 +75,10 @@ import com.google.android.gms.location.LocationServices
 import com.randallengineering.jokarztimeclock.data.backup.BackupCodec
 import com.randallengineering.jokarztimeclock.data.backup.ImportMode
 import com.randallengineering.jokarztimeclock.data.backup.ImportPlan
+import com.randallengineering.jokarztimeclock.data.csv.AnomalyKind
+import com.randallengineering.jokarztimeclock.data.csv.CsvFileReader
+import com.randallengineering.jokarztimeclock.data.csv.CsvImportPreview
+import com.randallengineering.jokarztimeclock.data.csv.CsvParseResult
 import com.randallengineering.jokarztimeclock.data.models.AppSettings
 import com.randallengineering.jokarztimeclock.data.models.PaySchedule
 import com.randallengineering.jokarztimeclock.data.models.PeriodTotals
@@ -491,7 +496,9 @@ fun SettingsDialog(
     onSave: (AppSettings) -> Unit,
     onExportBackup: () -> String,
     onPlanImport: (TimeclockState, ImportMode) -> ImportPlan,
-    onConfirmImport: (TimeclockState, ImportMode) -> Unit
+    onConfirmImport: (TimeclockState, ImportMode) -> Unit,
+    onPlanCsvImport: (CsvParseResult.Success, ImportMode) -> CsvImportPreview,
+    onConfirmCsvImport: (CsvParseResult.Success, ImportMode) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -518,6 +525,17 @@ fun SettingsDialog(
             when (val decoded = withContext(Dispatchers.IO) { readBackup(context, uri) }) {
                 is BackupCodec.Decoded.Invalid -> importError = decoded.reason
                 is BackupCodec.Decoded.Valid -> pendingImport = decoded
+            }
+        }
+    }
+    var pendingCsv by remember { mutableStateOf<PendingCsv?>(null) }
+    val csvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val (name, result) = withContext(Dispatchers.IO) { displayName(context, uri) to readCsv(context, uri) }
+            when (result) {
+                is CsvFileReader.Result.Refused -> importError = result.reason
+                is CsvFileReader.Result.Ready -> pendingCsv = PendingCsv(name, result.parsed)
             }
         }
     }
@@ -951,6 +969,32 @@ fun SettingsDialog(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(10.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text("IMPORT AN OLD PAYROLL CSV", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    "Bring in shifts from an old CSV export, e.g. a 'Transfer Dock' timesheet. " +
+                        "Durations are recalculated from the start and end times.",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                FilledTonalButton(
+                    // Providers label a .csv/.txt inconsistently: text/csv, text/comma-separated-values,
+                    // text/plain, or application/octet-stream for a file with no known extension. The
+                    // named types sort real text first in pickers that honour them; */* keeps a file
+                    // with any other label pickable. The parser refuses anything that is not his CSV.
+                    onClick = { csvLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "text/plain", "*/*")) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Choose CSV file", fontSize = 11.sp)
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     com.randallengineering.jokarztimeclock.AppVersion.label,
@@ -1015,7 +1059,23 @@ fun SettingsDialog(
             onDismiss = { pendingImport = null }
         )
     }
+
+    pendingCsv?.let { pending ->
+        CsvImportPreviewDialog(
+            fileName = pending.fileName,
+            parsed = pending.parsed,
+            onPlanCsvImport = onPlanCsvImport,
+            onConfirm = { mode ->
+                pendingCsv = null
+                onConfirmCsvImport(pending.parsed, mode)
+            },
+            onDismiss = { pendingCsv = null }
+        )
+    }
 }
+
+/** A CSV that parsed completely and is waiting for the owner to read its preview. */
+private class PendingCsv(val fileName: String, val parsed: CsvParseResult.Success)
 
 /** Largest file we will read into memory; a real backup of years of shifts is well under 1 MB. */
 private const val MAX_BACKUP_BYTES = 20 * 1024 * 1024
@@ -1100,6 +1160,148 @@ private fun ImportBackupConfirmDialog(
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
+}
+
+private fun readCsv(context: Context, uri: Uri): CsvFileReader.Result = try {
+    context.contentResolver.openInputStream(uri).use { CsvFileReader.read(it) }
+} catch (e: Exception) {
+    CsvFileReader.Result.Refused("The file could not be read. Nothing was imported.")
+}
+
+private fun displayName(context: Context, uri: Uri): String = try {
+    context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+        if (c.moveToFirst()) c.getString(0) else null
+    }
+} catch (e: Exception) {
+    null
+} ?: uri.lastPathSegment ?: "the chosen file"
+
+/**
+ * Everything a CSV import would bring in, shown before anything is written: every entry (none are
+ * summarised away), every flag in the importer's own words, and the planner's statement of the
+ * selected mode. Only a fully parsed file ever reaches this dialog.
+ */
+@Composable
+private fun CsvImportPreviewDialog(
+    fileName: String,
+    parsed: CsvParseResult.Success,
+    onPlanCsvImport: (CsvParseResult.Success, ImportMode) -> CsvImportPreview,
+    onConfirm: (ImportMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    // MERGE is the default for the same reason as a backup import: it keeps every existing shift.
+    var mode by remember { mutableStateOf(ImportMode.MERGE) }
+    val preview = remember(mode) { onPlanCsvImport(parsed, mode) }
+    val modeLabel = if (mode == ImportMode.REPLACE) "Replace my shifts" else "Merge by id"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Import CSV?", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(fileName, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "${preview.entriesParsed} ${if (preview.entriesParsed == 1) "entry" else "entries"} will be imported" +
+                        if (preview.entriesNeedingAttention > 0) ", ${preview.entriesNeedingAttention} need a look." else ".",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    ImportModeButton("Replace my shifts", mode == ImportMode.REPLACE, Modifier.weight(1f)) {
+                        mode = ImportMode.REPLACE
+                    }
+                    ImportModeButton("Merge by id", mode == ImportMode.MERGE, Modifier.weight(1f)) {
+                        mode = ImportMode.MERGE
+                    }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text("Selected: $modeLabel", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(preview.modeStatement, fontSize = 12.sp)
+                Text(preview.keepsStatement, fontSize = 12.sp)
+
+                if (preview.anomalies.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("FLAGGED — READ BEFORE IMPORTING", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                    preview.anomalies.forEach { anomaly ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        if (anomaly.kind.informational) {
+                            Text("ℹ ${anomaly.message}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    "⚠ ${anomaly.message}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.padding(8.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                Text("EVERY ENTRY IN THE FILE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                preview.rows.forEach { row -> CsvPreviewRow(row) }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(mode) }) {
+                Text(if (mode == ImportMode.REPLACE) "Replace" else "Merge")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+private fun CsvPreviewRow(row: CsvImportPreview.PreviewRow) {
+    val needsAttention = row.anomalyKinds.any { !it.informational }
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = if (needsAttention) MaterialTheme.colorScheme.errorContainer else Color.Transparent,
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)) {
+            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Text(row.localDate, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(row.durationText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+            val end = if (row.localEndDate != row.localDate) "${row.localEndDate} ${row.localEnd}" else row.localEnd
+            Text(
+                "${row.localStart} – $end · break ${row.breakText} · line ${row.line}",
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (row.note.isNotBlank()) {
+                Text(row.note, fontSize = 10.sp)
+            }
+            if (row.anomalyKinds.isNotEmpty()) {
+                Text(
+                    (if (needsAttention) "⚠ " else "ℹ ") + row.anomalyKinds.joinToString { anomalyLabel(it) },
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (needsAttention) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+private fun anomalyLabel(kind: AnomalyKind): String = when (kind) {
+    AnomalyKind.MISSED_CLOCK_OUT -> "missed clock-out?"
+    AnomalyKind.IMPLAUSIBLE_DURATION -> "very long shift"
+    AnomalyKind.OVERNIGHT_ROLLED -> "ends the next day"
+    AnomalyKind.VERY_SHORT_ENTRY -> "very short entry"
+    AnomalyKind.OVERLAPPING_ENTRIES -> "overlaps another shift"
 }
 
 @Composable

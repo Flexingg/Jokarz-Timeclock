@@ -8,6 +8,8 @@ import com.randallengineering.jokarztimeclock.data.backup.BackupCodec
 import com.randallengineering.jokarztimeclock.data.backup.BackupImportPlanner
 import com.randallengineering.jokarztimeclock.data.backup.ImportMode
 import com.randallengineering.jokarztimeclock.data.backup.ImportPlan
+import com.randallengineering.jokarztimeclock.data.csv.CsvImportPreview
+import com.randallengineering.jokarztimeclock.data.csv.CsvParseResult
 import com.randallengineering.jokarztimeclock.data.models.AppSettings
 import com.randallengineering.jokarztimeclock.data.models.PayMode
 import com.randallengineering.jokarztimeclock.data.models.PeriodTotals
@@ -217,6 +219,31 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
     fun importBackup(incoming: TimeclockState, mode: ImportMode): ImportPlan? {
         val plan = planImport(incoming, mode)
         if (!repository.importBackup(plan.resultingState)) return null
+        afterImport()
+        return plan
+    }
+
+    /**
+     * What importing [parsed] under [mode] would do to the state as it is now. Goes through
+     * [CsvImportPreview.build], which builds the CSV's incoming state (a REPLACE keeps rates,
+     * settings, PTO and the running shift) and plans it with the same [BackupImportPlanner].
+     */
+    fun planCsvImport(parsed: CsvParseResult.Success, mode: ImportMode): CsvImportPreview =
+        CsvImportPreview.build(parsed, state.value, mode, System.currentTimeMillis())
+
+    /**
+     * Same shape as [importBackup]: re-plans against the state as it is *now*, applies it atomically
+     * through the repository, and returns null (nothing changed) if the write failed.
+     */
+    fun importCsv(parsed: CsvParseResult.Success, mode: ImportMode): ImportPlan? {
+        val plan = planCsvImport(parsed, mode).plan
+        if (!repository.importBackup(plan.resultingState)) return null
+        afterImport()
+        return plan
+    }
+
+    /** The geofence, live notification and Tasker all read the state an import just replaced. */
+    private fun afterImport() {
         val s = state.value
         geofenceManager.updateGeofence(s.settings)
         if (s.isClockedIn && s.settings.liveNotificationEnabled) {
@@ -225,7 +252,6 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
             notificationHelper.clearLiveNotification()
         }
         pushTaskerData()
-        return plan
     }
 
     private fun pushTaskerData() {

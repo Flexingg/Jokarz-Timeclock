@@ -24,7 +24,10 @@ class ShiftTimeMathTest {
 
     private val ny = TimeZone.getTimeZone("America/New_York")
     private lateinit var previous: TimeZone
-    private val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
+    // Field init runs before @Before pins the default zone, so the parser must carry the
+    // plant zone itself: otherwise the wall-clock strings parse in the build machine's zone
+    // and every expectation shifts (NY is UTC-4/5, CI runs UTC).
+    private val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).apply { timeZone = ny }
 
     @Before
     fun setUp() {

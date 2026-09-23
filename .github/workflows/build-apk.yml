@@ -159,8 +159,29 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
-      - name: Attach the APK to the GitHub release
+      # A published release asset is a promise: its size and sha256 were recorded in the release
+      # notes and the docs, so a later CI run must not silently replace it with a (byte-different,
+      # non-reproducible) rebuild. Attach only when the release does not already carry this APK.
+      - name: Does the release already carry an APK?
         if: startsWith(github.ref, 'refs/tags/')
+        id: release_asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          VERSION="${VERSION:-$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)}"
+          NAME="JokarzTimeclock-${VERSION}.apk"
+          EXISTING=$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+                       --json assets --jq '.assets[].name' 2>/dev/null || true)
+          if printf '%s\n' "$EXISTING" | grep -qx "$NAME"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$NAME is already published on $GITHUB_REF_NAME - keeping it (its recorded sha256 stands)"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Attach the APK to the GitHub release
+        if: startsWith(github.ref, 'refs/tags/') && steps.release_asset.outputs.skip != 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: 'dist/*'

@@ -6,10 +6,7 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -52,10 +49,6 @@ import kotlinx.coroutines.CoroutineScope
  * reduced-motion flag additionally drops the purely decorative squashes and the confirmation badge.
  */
 
-/** The bouncy spring shared by the primary action, the stage morph and the state pulse. */
-fun <T> expressiveSpring(): SpringSpec<T> =
-    spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-
 /** True when the owner has turned animations off (Developer options / "Remove animations"). */
 @Composable
 fun rememberReducedMotion(): Boolean {
@@ -88,27 +81,28 @@ private const val PULSE_SQUASH = 0.86f
 private const val PRESS_SQUASH = 0.9f
 
 /**
- * A scale that squashes and springs back to 1 each time [key] changes (e.g. the shift state).
- * Read it inside `graphicsLayer {}` so the bounce only redraws.
+ * A scale that squashes and springs back to 1 each time [key] changes (e.g. the shift state), on the
+ * theme's expressive default spatial spring. Read it inside `graphicsLayer {}` so the bounce only redraws.
  */
 @Composable
 fun rememberStatePulse(key: Any?, reducedMotion: Boolean): State<Float> {
     val scale = remember { Animatable(1f) }
+    val spec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     LaunchedChangeEffect(key) {
         if (reducedMotion) return@LaunchedChangeEffect
         scale.snapTo(PULSE_SQUASH)
-        scale.animateTo(1f, expressiveSpring())
+        scale.animateTo(1f, spec)
     }
     return scale.asState()
 }
 
-/** Squash-while-pressed for a primary button, released with the bouncy spring. */
+/** Squash-while-pressed for a primary button, on the theme's expressive fast spatial spring. */
 @Composable
 fun rememberPressSquash(interactionSource: InteractionSource, reducedMotion: Boolean): State<Float> {
     val pressed by interactionSource.collectIsPressedAsState()
     return animateFloatAsState(
         targetValue = if (pressed && !reducedMotion) PRESS_SQUASH else 1f,
-        animationSpec = expressiveSpring(),
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
         label = "pressSquash"
     )
 }

@@ -64,6 +64,8 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
+        // The Material 3 Expressive API (MaterialShapes, wavy progress, MotionScheme) is opt-in.
+        freeCompilerArgs += "-opt-in=androidx.compose.material3.ExperimentalMaterial3ExpressiveApi"
     }
     buildFeatures {
         compose = true
@@ -86,7 +88,10 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3:1.3.1")
+    // Pinned ahead of the BOM (the explicit version wins): 1.5.0-alpha10 is the first cached artifact
+    // with the Material 3 Expressive API the hero uses (MaterialShapes, CircularWavyProgressIndicator,
+    // MotionScheme, MaterialExpressiveTheme). 1.4.0 has no MaterialShapes / wavy indicator.
+    implementation("androidx.compose.material3:material3:1.5.0-alpha10")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")

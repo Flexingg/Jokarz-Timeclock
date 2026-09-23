@@ -11,11 +11,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,26 +32,29 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.WavyProgressIndicatorDefaults
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.randallengineering.jokarztimeclock.data.models.PayMode
@@ -61,22 +62,21 @@ import com.randallengineering.jokarztimeclock.data.models.TimeclockState
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
 import com.randallengineering.jokarztimeclock.ui.theme.AmberWarning
 import com.randallengineering.jokarztimeclock.ui.theme.EmeraldSuccess
-import com.randallengineering.jokarztimeclock.ui.theme.ExpressiveShapes
 import com.randallengineering.jokarztimeclock.ui.theme.PurpleAccent
 import com.randallengineering.jokarztimeclock.ui.theme.RoseError
-import com.randallengineering.jokarztimeclock.ui.theme.ShapeMorph
+import com.randallengineering.jokarztimeclock.ui.theme.ShiftRing
 import com.randallengineering.jokarztimeclock.ui.theme.StagePose
 import com.randallengineering.jokarztimeclock.ui.theme.TimerDisplayStyle
 import com.randallengineering.jokarztimeclock.ui.theme.WavyTopShape
-import com.randallengineering.jokarztimeclock.ui.theme.shapeMorph
 import java.util.Calendar
 import kotlin.math.abs
 import kotlin.math.max
 
 /**
  * The "stage": one wavy-topped container holding the live timer and the primary action. Its corners
- * and wave depth spring to a new [StagePose] whenever the shift state changes, and the primary
- * button squashes and bounces back. The timer itself is never animated.
+ * and wave depth spring (the theme's expressive motion scheme) to a new [StagePose] whenever the shift
+ * state changes, and the primary button squashes and bounces back. The ring around the timer is the
+ * official wavy progress indicator; the timer digits themselves are never animated.
  */
 @Composable
 fun GoogleClockHero(
@@ -91,7 +91,9 @@ fun GoogleClockHero(
     val reducedMotion = rememberReducedMotion()
 
     val pose = StagePose.of(isClockedIn, state.isOnBreak)
-    val poseSpec: AnimationSpec<Float> = if (reducedMotion) snap() else expressiveSpring()
+    val stageSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    val sizeSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
+    val poseSpec: AnimationSpec<Float> = if (reducedMotion) snap() else stageSpec
     val topStart by animateFloatAsState(pose.topStart, poseSpec, label = "stageTopStart")
     val topEnd by animateFloatAsState(pose.topEnd, poseSpec, label = "stageTopEnd")
     val bottomEnd by animateFloatAsState(pose.bottomEnd, poseSpec, label = "stageBottomEnd")
@@ -120,7 +122,7 @@ fun GoogleClockHero(
                 } else {
                     // A plain cross-fade: nothing slides or scales under the timer.
                     fadeIn(tween(220, delayMillis = 60)) togetherWith fadeOut(tween(120)) using
-                        SizeTransform(clip = false) { _, _ -> expressiveSpring() }
+                        SizeTransform(clip = false) { _, _ -> sizeSpec }
                 }
             },
             contentAlignment = Alignment.TopCenter,
@@ -173,14 +175,13 @@ private fun ActiveShiftStage(
     val standardTargetMs = ((settings.standardShiftHours + mealToAdd) * 3600000.0).toLong()
     val cliffTargetMs = (settings.cliffHours * 3600000.0).toLong()
 
-    // Circular progress (0.0 to 1.0)
-    val progress = if (elapsedMs <= standardTargetMs) {
-        (elapsedMs.toFloat() / standardTargetMs.toFloat()).coerceIn(0f, 1f)
-    } else {
-        ((elapsedMs - standardTargetMs).toFloat() / (cliffTargetMs - standardTargetMs).toFloat()).coerceIn(0f, 1f)
+    // 0..1 across the standard shift, then again across standard → cliff.
+    val progress = ShiftRing.progress(elapsedMs, standardTargetMs, cliffTargetMs)
+    val ringColor = when (ShiftRing.tier(elapsedMs, standardTargetMs, cliffTargetMs)) {
+        ShiftRing.Tier.STANDARD -> MaterialTheme.colorScheme.primary
+        ShiftRing.Tier.BANKING -> AmberWarning
+        ShiftRing.Tier.CLIFF -> RoseError
     }
-
-    val primaryColor = MaterialTheme.colorScheme.primary
     // The timer plate: onSurface on surfaceContainerHighest is a guaranteed high-contrast pair in
     // every preset and in wallpaper palettes, unlike anything derived from primary.
     val plateColor = MaterialTheme.colorScheme.surfaceContainerHighest
@@ -189,37 +190,23 @@ private fun ActiveShiftStage(
         contentAlignment = Alignment.Center,
         modifier = Modifier.size(264.dp)
     ) {
-        Canvas(modifier = Modifier.size(256.dp)) {
-            val strokeWidth = 12.dp.toPx()
-            val arcSize = size.width - strokeWidth
-            val topLeft = Offset(strokeWidth / 2f, strokeWidth / 2f)
-
-            // Background track
-            drawArc(
-                color = plateColor,
-                startAngle = -90f,
-                sweepAngle = 360f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = Size(arcSize, arcSize),
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-            )
-
-            // Active dynamic arc
-            val arcColor = if (elapsedMs >= cliffTargetMs) RoseError
-            else if (elapsedMs >= standardTargetMs) AmberWarning
-            else primaryColor
-
-            drawArc(
-                color = arcColor,
-                startAngle = -90f,
-                sweepAngle = progress * 360f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = Size(arcSize, arcSize),
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-            )
-        }
+        // The official expressive wavy indicator owns the wiggle: its active arc undulates and the
+        // wave travels on its own. Reduced motion flattens it (zero amplitude, zero wave speed).
+        // Stroke weight stays at the ring's existing 12dp; wavelength and gap are the M3 tokens.
+        val density = LocalDensity.current
+        val ringStroke = remember(density) { with(density) { Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round) } }
+        CircularWavyProgressIndicator(
+            progress = { progress },
+            color = ringColor,
+            trackColor = plateColor,
+            stroke = ringStroke,
+            trackStroke = ringStroke,
+            gapSize = WavyProgressIndicatorDefaults.CircularIndicatorTrackGapSize,
+            amplitude = ShiftRing.amplitude(reducedMotion),
+            wavelength = WavyProgressIndicatorDefaults.CircularWavelength,
+            waveSpeed = if (reducedMotion) 0.dp else WavyProgressIndicatorDefaults.CircularWavelength,
+            modifier = Modifier.size(256.dp)
+        )
 
         // A plain circle, not a decorative outline, so nothing competes with the digits.
         Box(
@@ -282,7 +269,7 @@ private fun ActiveShiftStage(
     val rate = if (state.displayMode == PayMode.GROSS) state.grossRate else state.netRate
 
     Surface(
-        shape = ExpressiveShapes.Pill,
+        shape = CircleShape,
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
         modifier = Modifier.padding(horizontal = 8.dp)
@@ -362,7 +349,10 @@ private fun ActiveShiftStage(
     ) {
         FilledTonalButton(
             onClick = onBreakToggle,
-            shape = ExpressiveShapes.Pill,
+            // A wide button cannot carry a circle: toShape() scales the unit-square polygon to the
+            // button's box, so Circle on this shape would render as an ellipse. MaterialShapes.Pill
+            // is the official shape for a wide action, and it is what this button already looked like.
+            shape = MaterialShapes.Pill.toShape(),
             colors = ButtonDefaults.filledTonalButtonColors(
                 containerColor = if (state.isOnBreak) AmberWarning else MaterialTheme.colorScheme.surface,
                 contentColor = if (state.isOnBreak) Color.Black else AmberWarning
@@ -386,7 +376,7 @@ private fun ActiveShiftStage(
         val pressSquash = rememberPressSquash(clockOutInteraction, reducedMotion)
         Button(
             onClick = onClockToggle,
-            shape = ExpressiveShapes.Pill,
+            shape = MaterialShapes.Square.toShape(),
             interactionSource = clockOutInteraction,
             colors = ButtonDefaults.buttonColors(
                 containerColor = RoseError,
@@ -430,33 +420,22 @@ private fun ReadyStage(
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    // The clock-in cookie: squashes and firms up into a squircle while held, bounces on release.
+    // The clock-in cookie (official MaterialShapes.Cookie9Sided): squashes while held, bounces on release.
     val interaction = remember { MutableInteractionSource() }
     val pressSquash = rememberPressSquash(interaction, reducedMotion)
-    val pressed by interaction.collectIsPressedAsState()
-    val pressMorph by animateFloatAsState(
-        targetValue = if (pressed && !reducedMotion) 1f else 0f,
-        animationSpec = expressiveSpring(),
-        label = "clockInMorph"
-    )
-    val morph = remember { ShapeMorph(ExpressiveShapes.Cookie, ExpressiveShapes.Badge) }
 
-    Box(
-        contentAlignment = Alignment.Center,
+    Surface(
+        onClick = onClockToggle,
+        shape = MaterialShapes.Cookie9Sided.toShape(),
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        interactionSource = interaction,
         modifier = Modifier
             .size(156.dp)
             .graphicsLayer {
                 scaleX = pressSquash.value * statePulse.value
                 scaleY = scaleX
             }
-            .shapeMorph(morph) { pressMorph }
-            .background(MaterialTheme.colorScheme.primary)
-            .clickable(
-                interactionSource = interaction,
-                indication = null,
-                role = Role.Button,
-                onClick = onClockToggle
-            )
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,

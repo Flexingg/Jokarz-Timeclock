@@ -5,7 +5,8 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -175,8 +176,11 @@ fun JokarzTimeclockTheme(
         }
     }
 
-    MaterialTheme(
+    // Material 3 Expressive: same colours, typography and shapes, plus the expressive motion scheme
+    // (MaterialTheme.motionScheme) that the hero's springs read.
+    MaterialExpressiveTheme(
         colorScheme = colorScheme,
+        motionScheme = MotionScheme.expressive(),
         typography = Typography,
         shapes = shapes,
         content = content

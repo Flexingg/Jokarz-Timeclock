@@ -5,9 +5,9 @@ package com.randallengineering.jokarztimeclock
  * `versionName` / `versionCode` in `app/build.gradle.kts`.
  */
 object AppVersion {
-    /** e.g. "Jokarz Timeclock v2.8.0 (build 12)" — shown in the app header, Settings and diagnostics. */
+    /** e.g. "Jokarz Timeclock v2.8.1 (build 13)" — shown in the app header, Settings and diagnostics. */
     val label: String = "Jokarz Timeclock v${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})"
 
-    /** e.g. "Jokarz Timeclock v2.8.0" — the notification sub-text, so a screenshot proves the build. */
+    /** e.g. "Jokarz Timeclock v2.8.1" — the notification sub-text, so a screenshot proves the build. */
     val short: String = "Jokarz Timeclock v${BuildConfig.VERSION_NAME}"
 }

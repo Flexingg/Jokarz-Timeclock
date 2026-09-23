@@ -1,7 +1,7 @@
 # ⏱️ Jokarz Timeclock (Native Jetpack Compose & Material You)
 
-[![Release](https://img.shields.io/badge/Release-v2.8.0-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.8.0)
-[![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.0.apk)
+[![Release](https://img.shields.io/badge/Release-v2.8.1-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.8.1)
+[![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.1.apk)
 [![Platform](https://img.shields.io/badge/Platform-Native%20Android%20Compose-blue.svg)](https://developer.android.com/jetpack/compose)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -14,12 +14,12 @@ itself.
 
 ## 📲 Download
 
-📥 **[JokarzTimeclock-2.8.0.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.0.apk)**
+📥 **[JokarzTimeclock-2.8.1.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.1.apk)**
 
 > **Install**: copy the `.apk` to the phone and tap it (allow *Install unknown apps* if asked).
 >
-> **Signing — no uninstall needed.** v2.8.0 is signed with the **same release key as v2.7.0**, so it
-> installs straight over the top and your shift history stays intact.
+> **Signing — no uninstall needed.** v2.8.1 is signed with the **same release key as v2.8.0 and
+> v2.7.0**, so it installs straight over the top and your shift history stays intact.
 > * Certificate DN: `CN=Jokarz Engineering, OU=Engineering, O=Randall Engineering`
 > * SHA-256: `8aeb00392caa86d8565e7724738a27f514bfa688d201216fb63d42824f4013c3`
 > * SHA-1: `583e47a8eeb0497a2bc28fd9655fd27c79f47df4`
@@ -31,6 +31,33 @@ itself.
 
 ---
 
+## 🆕 v2.8.1 — the Tasker profile now actually imports
+
+1. **The exported Tasker profile is valid Tasker XML.** Tasker's answer to the old file was
+   *"Import failed … Error details: Missing event type"*. The cause was the trigger: the file wrote
+   `<code>331</code>` inside `<Event>`, and **331 is not an event at all** — in Tasker's tables it is
+   the *Task Action* `Auto-Sync`. Tasker could not work out what kind of event the profile listened
+   for, so it refused the file before it ever looked at the task. The trigger is now `599`
+   (*Intent Received*), and `docs/TASKER-FORMAT.md` records the whole schema with its sources so this
+   cannot be re-guessed. See [What was wrong with the old export](#what-was-wrong-with-the-old-export).
+2. **A real file, in a place Tasker can reach.** *Settings ▸ TASKER ▸ **Export Tasker profile
+   (.prf.xml)*** writes `Downloads/Jokarz_Timeclock.prf.xml` (MediaStore on Android 10+, the public
+   Downloads directory below that) and copies the XML to the clipboard as a second way in. The old
+   button wrote nothing at all — it fired an undocumented `tasker://import?file=<asset name>` URI.
+3. **The trigger and the app agree, and a test says so.** The profile listens for exactly the action
+   `TaskerBridge` broadcasts (`com.randallengineering.jokarztimeclock.EVENT`), verified by reading the
+   sender's own source in the test, not by trusting a comment.
+4. **Golden file + mutation proof.** `TaskerProfileXmlTest` (10 tests) validates the generated XML
+   against the documented schema and pins it byte-for-byte against a committed golden file. Removing
+   the `<Event>` element, changing the action string, or reverting `TaskerBridge` to Tasker's own
+   namespace each make the specific test fail — results below.
+
+Nothing else changed in v2.8.1: no payroll, UI or backup behaviour is touched. The status bar chip is
+**unchanged from v2.8.0** (see the ColorOS verdict below — it is still not something this app can
+guarantee).
+
+---
+
 ## 🆕 v2.8.0 — what changed
 
 1. **The status bar chip is now a real Android 16 Live Update candidate** — an *ongoing, promoted*
@@ -39,9 +66,9 @@ itself.
    on older OS versions. Nothing in the app wakes up to move the clock, and a test now fails the build
    if that ever changes. **Honest caveat:** whether an OEM skin such as ColorOS actually promotes a
    third-party app is the OEM's decision — see the ColorOS reality check below.
-2. **Tasker integration actually works** — the old `tasker://import` link and the bundled profile file
-   (which no Tasker version reads) are gone. Real broadcasts, a real "run task" intent, and a
-   `<queries>` entry so Android 11+ can see that Tasker is installed.
+2. **Tasker integration actually works** — the old `tasker://import` link is gone. Real broadcasts, a
+   real "run task" intent, a `<queries>` entry so Android 11+ can see that Tasker is installed, and
+   (from v2.8.1) a generated, schema-validated `.prf.xml` you import in Tasker yourself.
 3. **Backup & Restore** — versioned, checksummed export/import with atomic writes, so a restore can
    never half-write the state file.
 4. **Expressive Material 3 UI** — squircle/cookie/wavy custom shapes, spring motion, counting
@@ -111,7 +138,7 @@ depends on extras that never existed.
 .setWhen(sessionStartInstant)      // absolute clock-in instant, read back from storage
 .setUsesChronometer(true)          // SystemUI animates the elapsed value itself
 .setStyle(NotificationCompat.ProgressStyle()…)   // session progress: shift → bank buffer → overtime
-.setSubText("Jokarz Timeclock v2.8.0")           // the build, so a screenshot proves what is installed
+.setSubText("Jokarz Timeclock v2.8.1")           // the build, so a screenshot proves what is installed
 ```
 
 **Nothing in the app ticks the clock.** There is no per-second (or any other periodic) re-post of the
@@ -234,8 +261,8 @@ the main screen header, the bottom of Settings, and the notification's sub-text.
 
 ### ✅ Full checklist to confirm on the phone
 
-1. Install v2.8.0 over v2.7.0 — **no uninstall needed**, it is signed with the same key (see the
-   fingerprint in *Download*). The version string in the header must read **v2.8.0 (build 12)**
+1. Install v2.8.1 over v2.8.0 — **no uninstall needed**, it is signed with the same key (see the
+   fingerprint in *Download*). The version string in the header must read **v2.8.1 (build 13)**
    before you judge anything else.
 2. Steps A1–A4 above, then B5–B8.
 3. Watch the status bar for a minute: the seconds must advance with the phone untouched.
@@ -261,7 +288,7 @@ the main screen header, the bottom of Settings, and the notification's sub-text.
   clock in/out, a confirmation burst, counting totals and haptic feedback on the primary action. The
   live timer is deliberately left as plain, unanimated, high-contrast text — a fun shape must never
   make the timer harder to read.
-* **The build identifies itself** — "Jokarz Timeclock v2.8.0 (build 12)" on the main screen, in
+* **The build identifies itself** — "Jokarz Timeclock v2.8.1 (build 13)" on the main screen, in
   Settings and in the notification's sub-text, read from `BuildConfig`, so a stale install cannot
   masquerade as a bug.
 * **Precision payroll**: Mon–Thu 10.0h salary base, automatic 30-min meal after 4h, 10.5–12.5h unpaid
@@ -271,7 +298,8 @@ the main screen header, the bottom of Settings, and the notification's sub-text.
   plus AMOLED / Slate / Emerald / Amber dark presets in Settings.
 * **History list** with per-entry duration, day and week totals, and the weekly swiper.
 * **Geofence auto clock-in/out** (Google Maps geofencing) with a Tasker fallback.
-* **Tasker integration** in both directions — see [Tasker setup](#-tasker-setup) below.
+* **Tasker integration** in both directions — see [Tasker setup](#-tasker-setup) below. The app can
+  write you a working Tasker profile file (`.prf.xml`) and it can also be driven by Tasker.
 * **Analytics, PTO/holiday bank, CSV timesheet share, undo, money-privacy toggle, audio/haptics.**
 
 ---
@@ -327,6 +355,76 @@ and out never depends on it.
 **The app is not a Locale/Tasker plugin.** It does not implement the plugin protocol and does not appear
 in Tasker's Plugin list; everything goes through the plain intents above.
 
+### Exported profile: the app tells Tasker what happened (v2.8.1)
+
+This is the profile the app writes for you: **Settings ▸ TASKER ▸ Export Tasker profile (.prf.xml)**.
+It replaces the pre-2.8.1 "Import Tasker Profile" button, which produced a file Tasker refused with
+*"Error details: Missing event type"*.
+
+What the exported file contains:
+
+* one `<Profile>` named **Jokarz Timeclock Events**, whose trigger is an **Intent Received** event
+  (`<code>599</code>`) on the action `com.randallengineering.jokarztimeclock.EVENT` — the exact action
+  `TaskerBridge` broadcasts when you clock in or out, from the app, from a geofence or from Tasker;
+* one linked `<Task>` (the profile's `<mid0>` points at its `<id>`) that writes
+  `%JOKARZLASTEVENT` and `%JOKARZLASTEVENTDETAIL` from the received extras, so you can see the trigger
+  worked and then edit the task to do whatever you actually want.
+
+Exactly one `<Profile>` node on purpose: two would make the file a *Data Backup* instead of a *Profile
+file*, and Tasker's "Import Profile" menu never lists those.
+
+#### How to verify on your phone (nobody has done this for you — do these in order)
+
+1. In this app: **Settings ▸ TASKER ▸ "Export Tasker profile (.prf.xml)"**. The dialog says
+   `Written to Downloads/Jokarz_Timeclock.prf.xml (… bytes)`. If Android refused to write, the app says
+   why and puts the XML on the clipboard instead — you can import from the clipboard in that case.
+2. Open Tasker ▸ **long-press the PROFILES tab** ▸ **Import Profile**.
+3. Pick **Downloads/Jokarz_Timeclock.prf.xml**. **There must be no error dialog.** If a dialog appears,
+   screenshot it: the text names the fault (a "Missing event type" would mean the trigger element is
+   wrong, which the golden-file test is meant to make impossible).
+4. The list must now show a profile called **Jokarz Timeclock Events**, and opening it must show the
+   trigger named **Intent Received** with the action `com.randallengineering.jokarztimeclock.EVENT`.
+5. Clock in in this app. Go to Tasker ▸ **VARS** (or the profile's task run log): `%JOKARZLASTEVENT`
+   must now read `clock_in`, and `%JOKARZLASTEVENTDETAIL` `app`. Clock out: `clock_out`. That is the
+   whole loop proven — the profile fired.
+6. Edit that task to do what you want on a clock in/out (a notification, a note, a sheet, anything).
+7. **Importing twice fails on purpose** — Tasker refuses a second profile with the same name. Rename or
+   delete "Jokarz Timeclock Events" before importing again.
+
+Caveats worth knowing:
+
+* The file is **not** imported for you. Tasker has no public API for adding a profile, so the app writes
+  the file and you pick it in Tasker. (The old button pretended otherwise.)
+* The `<Task>` in the profile is a **starter** task: it only records the event. It does not clock you in
+  or out, and it deliberately does not send an intent back to the app — that would clock you in twice.
+* The schema, every element, every attribute and both numeric codes are documented in
+  [`docs/TASKER-FORMAT.md`](docs/TASKER-FORMAT.md) with the real Tasker exports they came from.
+
+### What was wrong with the old export
+
+The pre-2.8.1 file was `app/src/main/assets/jokarz_timeclock_tasker_profile.txt` (line numbers are from
+`git show v2.7.0:app/src/main/assets/jokarz_timeclock_tasker_profile.txt`):
+
+* **`<code>331</code>` inside `<Event sr="con0" ve="2">` (lines 9 and 23) is not an event type.** In
+  Tasker's code tables 331 is the *Task Action* `Auto-Sync`; Intent Received is `599`. Tasker resolves a
+  profile trigger from that number, so an unknown one leaves the context with no type and the import
+  stops with exactly the message in the screenshot. **This is the bug.**
+* **The event's arguments were wrong** (lines 10–13). `arg0` of an Intent Received event is the *intent
+  action*; the file put the Tasker package name there and the app's action in `arg1`. It also wrote
+  `<Int sr="arg2" dvi="1" />`, using `dvi` (an element-format attribute) where an `<Int>` takes its value
+  in `val=`.
+* **Neither profile linked a task.** There was no `<mid0>`, so the profiles ran nothing — even after a
+  successful import they could never have done anything.
+* **The actions were not actions.** Both tasks used `<code>130</code>` (*Perform Task*) with a shell
+  command (`am broadcast -a … --user 0`) in `arg0`, where Perform Task expects a task name. Sending the
+  broadcast is `877` (*Send Intent*); running a shell is `123`, and a normal app uid cannot run
+  `am broadcast --user 0` anyway.
+* **Two `<Profile>` nodes made it a Data Backup, not a Profile**, so "Import Profile" would never have
+  listed it; and the file was named `.txt`, which Tasker's import menu hides outright.
+* **The app never wrote a file.** The button opened `tasker://import?file=jokarz_timeclock_tasker_profile.txt`
+  (`engine/TaskerHelper.kt:14,30-35` in v2.7.0) — an undocumented URI no app handles, pointing at an
+  *asset* name that is not a file on disk.
+
 ### What was broken before v2.8.0
 
 * **Tasker → app did nothing.** The documented setup sent an Action-only broadcast to the receiver.
@@ -339,9 +437,10 @@ in Tasker's Plugin list; everything goes through the plain intents above.
   into a variable name by lower-casing it, replacing non-alphanumerics with `_` and prefixing `a`, so
   these arrived as `%a_worktechhrstoday`, never as the advertised name. The keys are now plain identifiers.
 * **The bundled Tasker profile could not work.** It was hand-written XML that Tasker could not import
-  cleanly. Its task ran `am broadcast` from Run Shell, which a normal app is not allowed to do. The
-  "import" button opened a `tasker://import` URI that nothing handles. All three have been removed and
-  replaced by the steps above.
+  cleanly (the exact faults are in *What was wrong with the old export* above). Its task ran
+  `am broadcast` from Run Shell, which a normal app is not allowed to do. The "import" button opened a
+  `tasker://import` URI that nothing handles. All three have been removed; v2.8.1 re-adds a **generated,
+  schema-validated** profile file in their place.
 
 ---
 
@@ -351,7 +450,7 @@ in Tasker's Plugin list; everything goes through the plain intents above.
 
 ```json
 { "schema": "jokarz-timeclock-backup", "version": 1,
-  "appVersionName": "2.8.0", "appVersionCode": 12, "exportedAtMs": 1789...,
+  "appVersionName": "2.8.1", "appVersionCode": 13, "exportedAtMs": 1789...,
   "payloadSha256": "…", "state": { … shifts, PTO, settings, audit … } }
 ```
 
@@ -406,7 +505,7 @@ $GRADLE_HOME/bin/gradle --no-daemon assembleRelease
   password file is committed any more** — they are gitignored, because committing a signing key with its
   password is a bad habit even for a private app. Without `keystore.properties` the build falls back to
   the debug key (fine for testing, useless for an update over an existing install).
-* Test suite: **96 tests, 0 failures**:
+* Test suite: **106 tests, 0 failures** (96 in v2.8.0 + 10 for the Tasker profile export):
 
   | Suite | Tests | Covers |
   | --- | --- | --- |
@@ -417,6 +516,7 @@ $GRADLE_HOME/bin/gradle --no-daemon assembleRelease
   | `LiveChipStatusTest` | 8 | the chip-verdict rules (below API 36, Live Updates off, promoted, not promoted) |
   | `NoPeriodicNotificationUpdateTest` | 2 | **fails the build** if a periodic notification re-post or an anti-promotion call returns |
   | `TaskerContractTest` | 9 | action names, extra keys → Tasker variable names, variable maths |
+  | `TaskerProfileXmlTest` | 10 | the exported profile: well-formed, golden-file byte match, exactly one `<Profile>`, trigger code `599` (never `331`), `arg0` = the action the app broadcasts, `<mid0>` → `<Task>` linkage, action codes and typed args, and a source read of `TaskerBridge.kt` |
   | `backup/BackupCodecTest` | 13 | export→import round trip, checksum, truncation, legacy, newer-version, foreign file |
   | `backup/BackupValidatorTest` | 5 | session/settings invariants |
   | `backup/BackupImportPlannerTest` | 6 | replace vs merge-by-id counts, running-shift handling |
@@ -432,6 +532,16 @@ $GRADLE_HOME/bin/gradle --no-daemon assembleRelease
   * Atomic write replaced by a direct `target.writeText(json)` → two `AtomicStateWriterTest` cases failed.
   * Validation, then the checksum check, removed from `BackupCodec.decode` → the corresponding codec
     tests failed.
+  * The `<Event>` trigger block deleted from `TaskerProfileExport.profileXml()` → **4 tests failed**:
+    *the trigger is an Intent Received event…* ("the profile has no `<Event>` trigger — this is exactly
+    the 'Missing event type' failure"), *the trigger listens for the exact action…* ("the profile needs
+    an `<Event>` trigger"), *TaskerBridge sends the same action…* (`arg0` was `null`), and the golden-file
+    byte comparison.
+  * The exported action changed to `…EVENT_typo` → **3 tests failed**: *the trigger listens for the exact
+    action…*, *TaskerBridge sends the same action…*, and the golden-file comparison.
+  * `TaskerBridge.kt` reverted to `Intent("net.dinglisch.android.tasker.ACTION_EVENT")` (the pre-2.8.0
+    bug) → *TaskerBridge sends the same action the exported profile listens for* failed on the
+    "must not go back to Tasker's own namespace" assertion.
 
 ---
 
@@ -452,8 +562,11 @@ $GRADLE_HOME/bin/gradle --no-daemon assembleRelease
 | ProgressStyle bar maths (pure) | `engine/ShiftProgressScale.kt` |
 | The build string shown on screen and in the notification | `AppVersion.kt` |
 | Tasker action/extra names, variable maths, setup recipe (pure Kotlin, unit-tested) | `engine/TaskerContract.kt` |
+| The generated Tasker profile XML (pure Kotlin, unit-tested) | `engine/TaskerProfileExport.kt` |
+| Writing the profile to Downloads + clipboard fallback | `engine/TaskerProfileWriter.kt` |
+| Tasker profile XML schema, with the real exports it came from | `docs/TASKER-FORMAT.md` |
 | App → Tasker broadcasts and the opt-in "run task" call | `engine/TaskerBridge.kt` |
-| In-app Tasker setup dialog (copy / Open Tasker / Share) | `engine/TaskerHelper.kt` |
+| In-app Tasker dialogs (export profile / setup recipe / Open Tasker) | `engine/TaskerHelper.kt` |
 
 ## ⚠️ Not verified without a device
 
@@ -462,10 +575,14 @@ unit-tested but not device-verified**: the actual pixel rendering of the chip/ca
 ColorOS honours the battery/autostart settings, notification-action behaviour on the real phone, and
 survival across a real reboot. The numbered checklist above is the way to confirm each one.
 
-The Tasker integration (v2.8.0) is in the same position. The action names, extra keys and variable
-maths are pinned by `TaskerContractTest`. Delivery on a phone with Tasker installed has **not** been
-tested: the deep link, the Package-restricted broadcast, the Intent Received profile, and the
-permission prompt for "run task".
+The Tasker integration (v2.8.0, extended in v2.8.1) is in the same position. The action names, extra
+keys and variable maths are pinned by `TaskerContractTest`; the exported XML is pinned to a documented
+schema, to a golden file and to the sender's source by `TaskerProfileXmlTest`. **No XML produced here has
+ever been offered to a real Tasker** — nothing on this machine can run Tasker — so "Tasker accepts the
+file" rests on the schema in `docs/TASKER-FORMAT.md`, on the checks in *How to verify on your phone*
+above and on nothing else. Also untested on a phone: the deep link, the Package-restricted broadcast, the
+Intent Received profile firing for real, the file write into Downloads, and the permission prompt for
+"run task".
 
 Also compiled-but-not-device-tested in v2.8.0:
 

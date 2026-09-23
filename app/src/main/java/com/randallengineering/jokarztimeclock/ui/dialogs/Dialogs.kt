@@ -710,6 +710,24 @@ fun SettingsDialog(
                     Text("Tasker Setup Instructions", fontSize = 12.sp)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
+                FilledTonalButton(
+                    onClick = { com.randallengineering.jokarztimeclock.engine.TaskerHelper.exportProfileFile(context) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    // Writes a real .prf.xml to Downloads, then shows the import steps. The old
+                    // button "imported" the profile with an undocumented tasker://... URI and no file.
+                    Text("Export Tasker profile (.prf.xml)", fontSize = 12.sp)
+                }
+                Text(
+                    "Tasker never imports this task's file for you — the button writes " +
+                        "Downloads/${com.randallengineering.jokarztimeclock.engine.TaskerProfileExport.FILE_NAME} " +
+                        "and then you import it in Tasker.",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,

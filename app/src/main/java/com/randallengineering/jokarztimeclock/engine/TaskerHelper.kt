@@ -10,22 +10,64 @@ import android.net.Uri
 import android.widget.Toast
 
 /**
- * In-app Tasker setup: shows and copies the exact recipe from [TaskerContract.setupSteps].
+ * In-app Tasker setup.
  *
- * Replaces the pre-2.8.0 "one-click import", which fired an undocumented `tasker://import?file=`
- * URI that nothing handles and bundled a hand-written Tasker XML asset that could not import cleanly
- * (its task also ran `am broadcast` from Run Shell, which a normal app uid may not do). Both were
- * removed; typed-in steps built from the same constants the code uses cannot drift.
+ * Two things live here:
+ *
+ *  1. [exportProfileFile] — writes a **valid** Tasker profile file (`.prf.xml`) to Downloads and
+ *     walks the owner through importing it. This replaces the pre-2.8.1 "one-click import", which
+ *     fired an undocumented `tasker://import?file=<asset name>` URI that nothing handles and shipped
+ *     a hand-written XML asset Tasker rejected with "Error details: Missing event type".
+ *  2. [launchTaskerSetup] — the typed recipe for the other directions (Tasker ▸ app, the app's
+ *     hour totals, the opt-in "run a Tasker task"), built from [TaskerContract.setupSteps] so it
+ *     cannot drift from the constants the code uses.
  */
 object TaskerHelper {
 
     private fun recipe(): String = TaskerContract.setupSteps().joinToString("\n")
 
-    /** Copies the recipe to the clipboard, then shows it with Open Tasker / Share buttons. */
+    /**
+     * Writes [TaskerProfileExport.profileXml] to Downloads, then shows the import steps. The XML is
+     * also copied to the clipboard, which is a usable fallback: recent Tasker versions import
+     * profile XML straight from the clipboard.
+     */
+    fun exportProfileFile(context: Context) {
+        val xml = TaskerProfileExport.profileXml()
+        copyToClipboard(context, "Jokarz Timeclock Tasker profile", xml)
+        val steps = TaskerProfileExport.importSteps().joinToString("\n")
+
+        when (val result = TaskerProfileWriter.write(context, xml)) {
+            is TaskerExportResult.Written -> AlertDialog.Builder(context)
+                .setTitle("Tasker profile exported")
+                .setMessage(
+                    "Written to ${result.location} (${result.bytes} bytes). " +
+                        "The XML is on the clipboard too.\n\nimport into Tasker:\n\n$steps"
+                )
+                .setPositiveButton("Open Tasker") { _, _ -> openTasker(context) }
+                .setNeutralButton("Copy XML") { _, _ ->
+                    copyToClipboard(context, "Jokarz Timeclock Tasker profile", xml)
+                    Toast.makeText(context, "Tasker XML copied", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("Close", null)
+                .show()
+
+            is TaskerExportResult.Failed -> AlertDialog.Builder(context)
+                .setTitle("Could not write the profile file")
+                .setMessage(
+                    "Android refused to write ${TaskerProfileExport.FILE_NAME}: ${result.reason}\n\n" +
+                        "The XML was copied to the clipboard instead — in Tasker, open the PROFILES " +
+                        "tab and import from the clipboard.\n\n$steps"
+                )
+                .setPositiveButton("Open Tasker") { _, _ -> openTasker(context) }
+                .setNegativeButton("Close", null)
+                .show()
+        }
+    }
+
+    /** Copies the typed recipe to the clipboard, then shows it with Open Tasker / Share buttons. */
     fun launchTaskerSetup(context: Context) {
         val text = recipe()
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("Jokarz Timeclock Tasker setup", text))
+        copyToClipboard(context, "Jokarz Timeclock Tasker setup", text)
 
         AlertDialog.Builder(context)
             .setTitle("Tasker setup (copied to clipboard)")
@@ -41,6 +83,11 @@ object TaskerHelper {
             }
             .setNegativeButton("Close", null)
             .show()
+    }
+
+    private fun copyToClipboard(context: Context, label: String, text: String) {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
     }
 
     private fun openTasker(context: Context) {

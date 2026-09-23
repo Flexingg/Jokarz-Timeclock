@@ -21,6 +21,11 @@
          is Tasker's own; the app asks for it only when the owner enables that setting, and nothing
          else in the app depends on it. -->
     <uses-permission android:name="net.dinglisch.android.tasker.PERMISSION_RUN_TASKS" />
+    <!-- Exporting the Tasker profile file needs to write to public Downloads on Android 9 and below;
+         Android 10+ uses MediaStore scoped storage, which needs no permission at all. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <!-- Package visibility (API 30+): without this, getPackageInfo/getLaunchIntentForPackage report
          Tasker as not installed even when it is. -->

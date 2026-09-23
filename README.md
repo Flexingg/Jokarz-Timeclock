@@ -17,19 +17,28 @@ itself.
 📥 **[JokarzTimeclock-2.8.0.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.0.apk)**
 
 > **Install**: copy the `.apk` to the phone and tap it (allow *Install unknown apps* if asked).
-> **Note on signing**: builds up to v2.6.1 were signed with a debug key that is not present on the
-> build machine, so Android may refuse to install v2.7.0 over them. If you see *"App not installed"*,
-> uninstall the old app once (it removes the local shift database) and install this build. From
-> v2.7.0 onward the release key is fixed and committed, so later updates install straight over the top
-> — **v2.8.0 is signed with that same release key and installs over v2.7.0 with no uninstall.**
+>
+> **Signing — no uninstall needed.** v2.8.0 is signed with the **same release key as v2.7.0**, so it
+> installs straight over the top and your shift history stays intact.
+> * Certificate DN: `CN=Jokarz Engineering, OU=Engineering, O=Randall Engineering`
+> * SHA-256: `8aeb00392caa86d8565e7724738a27f514bfa688d201216fb63d42824f4013c3`
+> * SHA-1: `583e47a8eeb0497a2bc28fd9655fd27c79f47df4`
+>
+> **No signature change ⇒ no uninstall, no data loss.** Only builds **up to v2.6.1** used a different
+> (debug) key: if you are still on one of those, Android will refuse the install with *"App not
+> installed"* and you must uninstall once (which removes the local shift database) — export a backup
+> from v2.8.0 onwards and it will never be a problem again. From v2.7.0 on, the key is fixed.
 
 ---
 
 ## 🆕 v2.8.0 — what changed
 
-1. **The status bar chip is now a promoted ongoing notification** — Android 16 Dynamic Island /
-   ColorOS Aqua Dynamics aware (`setRequestPromotedOngoing` + `ProgressStyle`), with the elapsed time
-   still drawn by the system chronometer. Nothing in the app wakes up to move the clock.
+1. **The status bar chip is now a real Android 16 Live Update candidate** — an *ongoing, promoted*
+   notification (`setRequestPromotedOngoing` + `ProgressStyle` + the `POST_PROMOTED_NOTIFICATIONS`
+   permission) with the elapsed time still drawn by the system chronometer, which remains the fallback
+   on older OS versions. Nothing in the app wakes up to move the clock, and a test now fails the build
+   if that ever changes. **Honest caveat:** whether an OEM skin such as ColorOS actually promotes a
+   third-party app is the OEM's decision — see the ColorOS reality check below.
 2. **Tasker integration actually works** — the old `tasker://import` link and the bundled profile file
    (which no Tasker version reads) are gone. Real broadcasts, a real "run task" intent, and a
    `<queries>` entry so Android 11+ can see that Tasker is installed.
@@ -83,17 +92,26 @@ plus a time chip. Both open native Material 3 pickers; there are no free-text fi
 
 ---
 
-## 🔔 The live status bar timer (how it works)
+## 🔔 The status bar chip — the real diagnosis, and what the app does about it
 
-`LiveShiftService` is a **foreground service** that holds one ongoing notification. The elapsed time
-you see is drawn by Android's SystemUI:
+**First, the honest diagnosis of the v2.7.0 symptom.** v2.7.0 made the elapsed time a system-drawn
+*chronometer* (`setWhen(...)` + `setUsesChronometer(true)`). That animates the counter **inside** the
+notification and it is genuinely not a re-post loop — but it does **not** put a chip in the status bar.
+A status-bar chip is Android 16's *promoted ongoing notification* ("Live Update"), which is a separate
+mechanism with its own eight requirements, a non-runtime permission, and an OEM gate. That is exactly
+what you described: *"still a normal notification that is updating, but not in the status bar."*
+v2.8.0 implements the promotion path (and keeps the chronometer as the fallback), so the chip no longer
+depends on extras that never existed.
+
+`LiveShiftService` is a **foreground service** holding one ongoing notification:
 
 ```kotlin
+.setOngoing(true)
+.setRequestPromotedOngoing(true)   // Android 16: ask the OS to promote this to a Live Update
 .setWhen(sessionStartInstant)      // absolute clock-in instant, read back from storage
 .setUsesChronometer(true)          // SystemUI animates the elapsed value itself
-.setOngoing(true)
-.setOnlyAlertOnce(true)
-.setSmallIcon(R.drawable.ic_stat_stopwatch)
+.setStyle(NotificationCompat.ProgressStyle()…)   // session progress: shift → bank buffer → overtime
+.setSubText("Jokarz Timeclock v2.8.0")           // the build, so a screenshot proves what is installed
 ```
 
 **Nothing in the app ticks the clock.** There is no per-second (or any other periodic) re-post of the
@@ -101,7 +119,106 @@ notification, and the service contains no sleep/poll loop at all — the notific
 when (a) the service starts, or (b) the stored state actually changes (clock in/out, break toggle,
 editing the running start, or the setting being toggled). Those are events, not timers. The subtitle
 is a segment label ("Started 6:02 AM • 10.5h target") rather than a countdown, precisely so it stays
-truthful without any app-side updating.
+truthful without any app-side updating. A unit test (`NoPeriodicNotificationUpdateTest`) reads these
+source files and **fails the build** if a `Handler`/`postDelayed`/`Timer`/`AlarmManager`/`delay()`-style
+re-post path is ever reintroduced — the 2.6.x behaviour cannot come back silently.
+
+### The eight requirements for promotion — all met, and all verified inside the built APK
+
+| # | Requirement (developer.android.com) | How this app meets it |
+| --- | --- | --- |
+| 1 | Standard / BigText / Call / **Progress** / Metric style | `NotificationCompat.ProgressStyle` |
+| 2 | Non-runtime permission `android.permission.POST_PROMOTED_NOTIFICATIONS` | Declared in the manifest; present in the built APK (`aapt dump badging`) |
+| 3 | Request promotion (`EXTRA_REQUEST_PROMOTED_ONGOING`) | `setRequestPromotedOngoing(true)` → writes `android.requestPromotedOngoing` (string confirmed in the DEX) |
+| 4 | Ongoing | `setOngoing(true)` + `FLAG_ONGOING_EVENT` |
+| 5 | A content title | "Shift Active" / "Shift Paused" |
+| 6 | No custom `RemoteViews` | none |
+| 7 | Not a group summary | none |
+| 8 | Channel not `IMPORTANCE_MIN` | channel `jokarz_live_shift_chip_v5`, `IMPORTANCE_HIGH`, silent |
+
+Notes that matter:
+
+* **The promotion setter is API 36.1+.** `Notification.Builder.setRequestPromotedOngoing()` does not
+  exist at API 36 — it was added in 36.1. This project compiles against **compileSdk 36** and requests
+  promotion through `NotificationCompat.Builder.setRequestPromotedOngoing(true)`, which sets the
+  documented extra key `android.requestPromotedOngoing` and is safe on every Android version.
+* **The progress bar is sampled, not animated.** It is computed when the notification is posted, so it
+  moves when a state change re-posts (clock in, break toggle, milestone, shift edit). Animating the bar
+  would require exactly the periodic re-post that this app deliberately does not have. The *live* number
+  is the system chronometer.
+* **No `setShortCriticalText`.** A static short-critical-text replaces the chip's content, which would
+  freeze the timer into a fixed string. The chip therefore shows the system elapsed timer from `setWhen`.
+* The old hand-written `oplus.*` / `com.oplus.*` / `android.extra.*` "capsule" extras were **deleted**.
+  Nothing in AOSP or the ColorOS SDK reads those keys; shipping them only made the previous release look
+  like it was doing something on the Oppo.
+
+### ColorOS reality check (Oppo Find X9 Pro) — read this before installing
+
+Android's own rule set is not the only gate: *"OEMs can enforce additional criteria for Live update
+eligibility."* Oppo's equivalent of the Dynamic Island / Live Update surface is **Aqua Dynamics / Fluid
+Cloud**, and it is **Oppo's own feature with its own allow-list** — Oppo's release notes state that the
+supported app and service types vary per model. A sideloaded third-party app cannot inject itself into
+Fluid Cloud, and there is no public API or manifest switch that forces it. So:
+
+* On **stock Android 16 QPR1 (API 36.1) and newer**, this app now requests promotion correctly and the
+  system decides — the diagnostics card below tells you which way it went.
+* On the **Find X9 Pro / ColorOS**, the expected result is a **normal ongoing notification whose timer is
+  drawn and animated by the system**, plus (if ColorOS chooses to honour the promotion request) its own
+  Live Alert treatment. **If ColorOS refuses to promote a third-party app, no code change can force it.**
+  That is stated plainly here rather than hidden behind a "works!" claim — and the in-app card reports
+  what your phone actually did instead of assuming.
+* The old behaviour (a notification that visibly re-draws itself every second) is gone either way.
+
+### ✅ How to get the chip to appear — numbered steps
+
+**A. Any Android 13+ phone (the basics)** — the same three things as v2.7.0:
+
+1. Open the app. If the red card appears, tap **Allow notifications** and accept.
+2. Tap **Battery: no restrictions** and accept the system dialog (*Settings ▸ Battery ▸ Unrestricted*).
+3. Tap **Autostart settings** and enable **Auto-launch** and **Allow background running** (ColorOS
+   wording may differ; the button falls back to the app-info screen if the OEM screen moved).
+4. Clock in. A **Shift Active** notification with a live system timer appears.
+
+**B. Android 16+ — allow Live Updates for the app** (required for a status-bar chip; the chip does not
+exist without it):
+
+5. Clock in, then open the app and look at the **Live chip status** card. It reads back the notification
+   the system actually posted and prints one of: *chip is live*, *Live Updates are switched off*,
+   *the phone is not promoting this app*, or *this Android version has no chip*. No guessing.
+6. If it says Live Updates are off, tap the card's **Live Updates settings** button and enable
+   **Live updates / Promoted notifications** for *Jokarz Timeclock*
+   (*Settings ▸ Notifications ▸ Jokarz Timeclock*, or *Settings ▸ Apps ▸ Special access ▸ Live updates*
+   depending on the OEM). Then tap **Re-check** on the card.
+7. Make sure the app's notification **category/channel** is not set to "Silent" / "Minimised" and that
+   *Live Alerts* (ColorOS wording: *Settings ▸ Notifications ▸ Live alerts*, or
+   *Settings ▸ Lock screen ▸ Live display*) is enabled if your ColorOS build exposes it. ColourOS may
+   also hide ongoing notifications from the lock screen — check
+   *Settings ▸ Lock screen ▸ Show notifications*.
+8. Watch the status bar for a minute without touching the phone: the seconds must advance **by
+   themselves**. That is the OS chronometer.
+
+**C. If the card says "the phone is not promoting this app"** — that is the honest answer, not a bug in
+the app: the OS (or its OEM skin) declined. The chip cannot be forced on ColorOS from a sideloaded app;
+re-check after a ColorOS update, because promotion behaviour has moved between builds.
+
+### 📸 Proving which build you have
+
+The version is printed in three places so a wrong-build install can never masquerade as a bug:
+the main screen header, the bottom of Settings, and the notification's sub-text. All read
+`BuildConfig.VERSION_NAME`/`VERSION_CODE`, so they cannot go stale.
+
+### Permissions declared, and why
+
+| Permission | Why |
+| --- | --- |
+| `POST_NOTIFICATIONS` (runtime, Android 13+) | Without it there is nowhere to draw the chip. Requested from an in-app explanation card; **if denied the app still works** (clock in/out, history, totals, payroll) — only the live chip and milestone alerts are lost, and the app says so in a snackbar and a persistent card. |
+| `POST_PROMOTED_NOTIFICATIONS` (non-runtime, Android 16+) | Required by the OS before it will promote the ongoing notification to a status-bar chip. Install-time; the user can still turn Live Updates off per app. |
+| `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE` | The chip must live in a foreground service. Type `specialUse` is the honest fit: this is not media playback, location tracking, a call, or `shortService`, and the API only offers those buckets. The manifest carries the required `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` string. |
+| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Powers the in-app "Battery: no restrictions" button (self-hosted/sideloaded app, not distributed via Play). |
+| `ACCESS_FINE/COARSE/BACKGROUND_LOCATION` | Existing geofence auto clock-in/out (unchanged). |
+| `net.dinglisch.android.tasker.PERMISSION_RUN_TASKS` | Tasker's own permission, for the **opt-in** "run a Tasker task on clock in/out" path only. Nothing else in the app depends on it. |
+
+### Other behaviour of the live notification
 
 * **Survives being backgrounded or swiped away** — a foreground service is not stopped by
   `onTaskRemoved`, and the service is not declared `android:stopWithTask`.
@@ -110,58 +227,27 @@ truthful without any app-side updating.
 * **Notification actions**: *Clock Out* and *Lunch / Pause* are handled inside the service
   (`PendingIntent.getService`), so they work even if the UI cannot be launched. Tapping the body opens
   the app on the main screen.
-* ColorOS "Aqua Dynamics"/Fluid Cloud and Android 16 promoted-ongoing capsule extras are attached so
-  the chip can also appear as a stopwatch capsule on the Oppo.
-* **One shared state object**: `TimeclockRepository` is now a process-wide singleton, so a clock-in
+* **One shared state object**: `TimeclockRepository` is a process-wide singleton, so a clock-in
   performed by the geofence/Tasker receiver or a break toggled from the notification is immediately
   visible to the UI *and* to the service. Geofence/Tasker clock-in also starts the chip, and
   auto-clock-out stops it.
 
-### Permissions declared, and why
+### ✅ Full checklist to confirm on the phone
 
-| Permission | Why |
-| --- | --- |
-| `POST_NOTIFICATIONS` (runtime, Android 13+) | Without it there is nowhere to draw the chip. Requested from an in-app explanation card; **if denied the app still works** (clock in/out, history, totals, payroll) — only the live chip and milestone alerts are lost, and the app says so in a snackbar and a persistent card. |
-| `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_SPECIAL_USE` | The chip must live in a foreground service. Type `specialUse` is the honest fit: this is not media playback, location tracking, a call, or `shortService`, and the API only offers those buckets. The manifest carries the required `PROPERTY_SPECIAL_USE_FGS_SUBTYPE` string. |
-| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Powers the in-app "Battery: no restrictions" button (self-hosted/sideloaded app, not distributed via Play). |
-| `ACCESS_FINE/COARSE/BACKGROUND_LOCATION` | Existing geofence auto clock-in/out (unchanged). |
-
-### ColorOS (Oppo Find X9 Pro) — the part that usually breaks
-
-ColorOS is aggressive about background work. Two phone settings decide whether the live timer keeps
-running when the screen is off:
-
-1. **Battery optimisation exemption** — in-app button: *Battery: no restrictions* (also reachable in
-   *Settings ▸ Battery*). Without it, ColorOS may freeze the app, and a frozen process cannot keep a
-   foreground service alive.
-2. **Autostart / "Allow background running"** — in-app button *Autostart settings* (ColorOS path:
-   *Settings ▸ Battery ▸ App launch ▸ Jokarz Timeclock ▸ allow Auto-launch and background running*).
-   The button tries the known ColorOS/OxygenOS/MIUI/EMUI autostart screens and falls back to the app
-   info screen.
-
-The main screen shows a card explaining both **only while something is missing**, plus a "Why does
-this matter on my Oppo?" explainer; once both are satisfied the card disappears (a small confirmation
-line appears while a shift is running).
-
-### ✅ How to confirm this is working on your phone
-
-1. Install v2.8.0, open the app, and tap **Allow notifications** when the red card appears.
-2. Tap **Battery: no restrictions** and accept the system dialog.
-3. Tap **Autostart settings** and enable **Auto-launch** and **Allow background running** for Jokarz
-   Timeclock (ColorOS wording may differ slightly).
-4. Clock in. A **Shift Active** chip appears in the status bar and its elapsed time starts counting.
-5. **Do not touch anything for a minute** and watch the status bar — the seconds must keep advancing
-   **on their own**. That is the OS chronometer; the app is not being woken to draw it.
-6. Swipe the app away from Recents. The chip must stay, and the entry must still be running when you
+1. Install v2.8.0 over v2.7.0 — **no uninstall needed**, it is signed with the same key (see the
+   fingerprint in *Download*). The version string in the header must read **v2.8.0 (build 12)**
+   before you judge anything else.
+2. Steps A1–A4 above, then B5–B8.
+3. Watch the status bar for a minute: the seconds must advance with the phone untouched.
+4. Swipe the app away from Recents. The chip must stay, and the entry must still be running when you
    reopen the app (History/hero timer shows the shift still open).
-7. Tap **Lunch / Pause** and then **Resume Shift** in the notification body; the title toggles between
+5. Tap **Lunch / Pause** and then **Resume Shift** in the notification body; the title toggles between
    *Shift Paused* / *Shift Active* without opening the app.
-8. Tap **Clock Out** in the notification; the entry is saved with the correct duration, and the chip
-   disappears.
-9. Reboot the phone while clocked in (optional): the chip should come back by itself with the correct
+6. Tap **Clock Out**; the entry is saved with the correct duration, and the chip disappears.
+7. Reboot the phone while clocked in (optional): the chip should come back by itself with the correct
    elapsed time, because the start instant is read from storage.
-10. Edit a shift to 22:00 → 06:00 the next morning and confirm it saves with a duration of 8h 00m and
-    the inline error appears if you try to set the stop before the start.
+8. Edit a shift to 22:00 → 06:00 the next morning and confirm it saves with a duration of 8h 00m and
+   the inline error appears if you try to set the stop before the start.
 
 ---
 
@@ -169,6 +255,15 @@ line appears while a shift is running).
 
 * **Live system chronometer chip** — see above.
 * **Date + time editing** with validation and overnight support — see above.
+* **Backup & Restore** — a versioned, checksummed export that imports back with a validated,
+  atomic, replace-or-merge choice — see [Backup & Restore](#-backup--restore-export-that-you-can-actually-import).
+* **Expressive Material 3 UI** — squircle/cookie/wavy custom shapes, spring-shaped hero morphs on
+  clock in/out, a confirmation burst, counting totals and haptic feedback on the primary action. The
+  live timer is deliberately left as plain, unanimated, high-contrast text — a fun shape must never
+  make the timer harder to read.
+* **The build identifies itself** — "Jokarz Timeclock v2.8.0 (build 12)" on the main screen, in
+  Settings and in the notification's sub-text, read from `BuildConfig`, so a stale install cannot
+  masquerade as a bug.
 * **Precision payroll**: Mon–Thu 10.0h salary base, automatic 30-min meal after 4h, 10.5–12.5h unpaid
   bank buffer, strict 12.5h overtime cliff (paid back to 10.5h), weekend = 100% overtime, configurable
   1.0x/1.5x/2.0x multipliers, semi-monthly / bi-weekly / weekly / monthly pay schedules.
@@ -250,6 +345,41 @@ in Tasker's Plugin list; everything goes through the plain intents above.
 
 ---
 
+## 💾 Backup & Restore (export that you can actually import)
+
+**Settings ▸ Backup & Restore** has both directions. The file is a single JSON document:
+
+```json
+{ "schema": "jokarz-timeclock-backup", "version": 1,
+  "appVersionName": "2.8.0", "appVersionCode": 12, "exportedAtMs": 1789...,
+  "payloadSha256": "…", "state": { … shifts, PTO, settings, audit … } }
+```
+
+* **Export backup** → the system file picker, suggested name
+  `jokarz-timeclock-backup-YYYY-MM-DD.json`. The payload carries a SHA-256 checksum.
+* **Import backup** → the file is read and **validated before anything is touched**:
+  * *schema* must be `jokarz-timeclock-backup` (any other JSON is refused as "not a Jokarz Timeclock
+    backup"), *version* must not be newer than the app understands, and the **checksum must match** —
+    a corrupted or truncated file is refused with the reason, never half-applied;
+  * every shift is checked (`stop` strictly after `start`, sane break duration, plausible instants) and
+    every setting is range-checked; the first violation is named (`Session #7 (end 2026-09-21T06:00)`).
+* **You are told what will happen before it happens.** The confirmation dialog shows the file's source
+  app version and export date, any warnings, and the exact plan for the mode you pick:
+  * **Merge by id** (the default) — new shifts and PTO entries are added, entries with an id that already
+    exists are updated, your settings/rates are kept, and **a shift that is running right now is left
+    alone**;
+  * **Replace everything** — the backup becomes the whole state, including settings, and a running shift
+    is ended (the summary says so explicitly).
+* **The write is atomic.** The new state is written to a sibling temp file, `fsync`ed, and renamed over
+  the real file; the in-memory state changes **only after** the rename succeeded. A failure (full disk,
+  permission, crash) leaves both the old file and the running app exactly as they were, and says
+  *"Import failed — your data was not changed."*
+* **Older files still work.** An export made by **v2.7.0** (a bare state JSON with no envelope) is
+  accepted as a *legacy* backup with a warning that it carries no checksum. A file from a **newer**
+  version is refused with "update the app first" rather than being half-understood.
+
+---
+
 ## 🛠️ Building and testing
 
 ```bash
@@ -264,17 +394,44 @@ $GRADLE_HOME/bin/gradle --no-daemon assembleRelease
 # -> app/build/outputs/apk/release/app-release.apk
 ```
 
-* Gradle **must** be run with `--no-daemon` on the build machine (memory constrained).
-* `gradlew` is not included (the wrapper points at a Windows distribution path); use a local
-  Gradle 8.12 installation.
-* Signing reads `keystore.properties` (store file, alias, passwords; the keystore itself is committed
-  in `keystore/` because this is a private, self-hosted app). Without that file, the build falls back
-  to the debug key.
-* Test suite: **33 tests, 0 failures** — `PayrollEngineTest` (6, pre-existing), `GeofenceManagerTest`
-  (4, pre-existing), `ShiftTimeMathTest` (14), `MidnightShiftPayrollTest` (9). The suite covers
-  midnight crossing, stop-before-start rejection, zero/over-long shifts, picker round-trips, DST
-  spring-forward/fall-back, and DST-safe day bucketing; three mutations of the production code were
-  checked to make sure the tests actually fail when it is broken.
+* Gradle **must** be run with `--no-daemon` on the build machine (memory constrained; a previous run
+  here died to an OOM kill). One Gradle command at a time.
+* `gradlew` is not included (the wrapper points at a Windows distribution path); use a local Gradle
+  **8.11.1** installation (`~/gradle-8.11.1/bin/gradle`). The build uses **AGP 8.10.1** — required
+  because `androidx.core:core-ktx:1.17.0` (which supplies `NotificationCompat.ProgressStyle` and
+  `setRequestPromotedOngoing`) refuses to build on AGP below 8.9.1.
+* `compileSdk = 36` / `targetSdk = 36` — API 36 is the first level that *has*
+  `Notification.ProgressStyle`, `setShortCriticalText` and `NotificationManager.canPostPromotedNotifications()`.
+* Signing reads `keystore.properties` (store file, alias, passwords). **Neither the keystore nor its
+  password file is committed any more** — they are gitignored, because committing a signing key with its
+  password is a bad habit even for a private app. Without `keystore.properties` the build falls back to
+  the debug key (fine for testing, useless for an update over an existing install).
+* Test suite: **96 tests, 0 failures**:
+
+  | Suite | Tests | Covers |
+  | --- | --- | --- |
+  | `PayrollEngineTest` | 6 | salary/bank/cliff maths |
+  | `ShiftTimeMathTest` | 14 | midnight crossing, stop-before-start rejection, picker round-trips, DST |
+  | `MidnightShiftPayrollTest` | 9 | overnight pricing, DST-safe day bucketing |
+  | `GeofenceManagerTest` | 4 | geofence enable/disable requirements |
+  | `LiveChipStatusTest` | 8 | the chip-verdict rules (below API 36, Live Updates off, promoted, not promoted) |
+  | `NoPeriodicNotificationUpdateTest` | 2 | **fails the build** if a periodic notification re-post or an anti-promotion call returns |
+  | `TaskerContractTest` | 9 | action names, extra keys → Tasker variable names, variable maths |
+  | `backup/BackupCodecTest` | 13 | export→import round trip, checksum, truncation, legacy, newer-version, foreign file |
+  | `backup/BackupValidatorTest` | 5 | session/settings invariants |
+  | `backup/BackupImportPlannerTest` | 6 | replace vs merge-by-id counts, running-shift handling |
+  | `backup/AtomicStateWriterTest` | 4 | atomic write; a failed write leaves the file untouched |
+  | `ui/theme/ShapeGeometryTest` | 11 | squircle/cookie/wave geometry and morph resampling |
+  | `ui/theme/MotionSpecTest` | 4 | the confirmation timeline |
+  | `ui/theme/TimerContrastTest` | 1 | the timer keeps its contrast |
+
+* **Guards were mutation-proved, not assumed** — the production code was deliberately broken, the
+  relevant test was watched to fail, and the file was restored from a `/tmp` copy (never `git checkout`):
+  * `Handler.postDelayed` re-post added to `LiveShiftService.kt` → `NoPeriodicNotificationUpdateTest`
+    failed naming `LiveShiftService.kt:73` / `:75` with the reason for each line.
+  * Atomic write replaced by a direct `target.writeText(json)` → two `AtomicStateWriterTest` cases failed.
+  * Validation, then the checksum check, removed from `BackupCodec.decode` → the corresponding codec
+    tests failed.
 
 ---
 
@@ -289,6 +446,11 @@ $GRADLE_HOME/bin/gradle --no-daemon assembleRelease
 | In-app ColorOS/notification health card | `ui/components/LiveChipHealthCard.kt` |
 | Date+time edit dialogs | `ui/dialogs/EditShiftDialogs.kt` |
 | Persistence (JSON in `filesDir`, absolute instants) | `data/repository/TimeclockRepository.kt` |
+| Backup file format, validation, import planning, atomic write | `data/backup/{BackupCodec,BackupValidator,BackupImportPlanner,AtomicStateWriter}.kt` |
+| Expressive shapes / motion / type | `ui/theme/{Shapes,ShapeGeometry,MotionSpec,Type}.kt`, `ui/components/ExpressiveMotion.kt` |
+| Status-bar-chip verdict (pure) + reader of the posted notification | `engine/LiveChipStatus.kt` |
+| ProgressStyle bar maths (pure) | `engine/ShiftProgressScale.kt` |
+| The build string shown on screen and in the notification | `AppVersion.kt` |
 | Tasker action/extra names, variable maths, setup recipe (pure Kotlin, unit-tested) | `engine/TaskerContract.kt` |
 | App → Tasker broadcasts and the opt-in "run task" call | `engine/TaskerBridge.kt` |
 | In-app Tasker setup dialog (copy / Open Tasker / Share) | `engine/TaskerHelper.kt` |
@@ -304,3 +466,13 @@ The Tasker integration (v2.8.0) is in the same position. The action names, extra
 maths are pinned by `TaskerContractTest`. Delivery on a phone with Tasker installed has **not** been
 tested: the deep link, the Package-restricted broadcast, the Intent Received profile, and the
 permission prompt for "run task".
+
+Also compiled-but-not-device-tested in v2.8.0:
+
+* whether the OS actually **promotes** the notification on a real Android 16.1 device, and what ColorOS
+  does with the request — the in-app **Live chip status** card is there precisely so the phone, not the
+  release notes, gets the last word;
+* the Backup & Restore file pickers and the import dialogs (the codec, validator, planner and atomic
+  writer underneath them have 28 tests and three mutation proofs);
+* how the new shapes and springs actually look — the geometry and the confirmation timeline are unit
+  tested, the rendering is not.

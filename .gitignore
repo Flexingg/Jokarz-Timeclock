@@ -11,3 +11,12 @@ captures/
 gradle-dist/
 android-build/
 .kotlin/
+
+# Signing material must never be committed (the password file is as sensitive as the keystore).
+keystore.properties
+keystore/
+*.jks
+*.keystore
+
+# Kotlin build session state
+.kotlin/

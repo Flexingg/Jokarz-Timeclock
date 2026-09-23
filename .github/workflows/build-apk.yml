@@ -91,28 +91,35 @@ jobs:
             $GRADLE_CMD assembleDebug --no-daemon --console=plain
           fi
 
-      # Module-agnostic, so it survives a rename of :app
+      # Module-agnostic, so it survives a rename of :app. Deliberately restricted to the build
+      # output tree: the repo also carries release APKs at the root for the LAN share, and
+      # matching one of those would "verify" a build that never happened.
       - name: Verify an APK actually exists
         run: |
           set -e
-          APK=$(find . -path ./.git -prune -o -name '*.apk' -print | head -1)
+          APK=$(find . -path ./.git -prune -o -path '*/build/outputs/apk/*' -name '*.apk' -print | head -1)
           if [ -z "$APK" ]; then
-            echo "::error::no APK was produced"; exit 1
+            echo "::error::no APK was produced by the build"; exit 1
           fi
           echo "APK: $APK"
           ls -la "$APK"
           sha256sum "$APK"
+          {
+            echo "APK_PATH=$APK"
+            echo "APK_NAME=$(basename "$APK")"
+            echo "APK_SHA256=$(sha256sum "$APK" | cut -d' ' -f1)"
+          } >> "$GITHUB_ENV"
 
       - name: Upload the APK as a build artifact
         uses: actions/upload-artifact@v4
         with:
           name: timeclock-apk
-          path: '**/*.apk'
+          path: '**/build/outputs/apk/**/*.apk'
           if-no-files-found: error
 
       - name: Attach the APK to the GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: '**/*.apk'
+          files: '**/build/outputs/apk/**/*.apk'
           fail_on_unmatched_files: true

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -15,7 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,7 +22,9 @@ import androidx.compose.ui.unit.sp
 import com.randallengineering.jokarztimeclock.data.models.PeriodTotals
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
 import com.randallengineering.jokarztimeclock.ui.theme.EmeraldSuccess
+import com.randallengineering.jokarztimeclock.ui.theme.ExpressiveShapes
 import com.randallengineering.jokarztimeclock.ui.theme.PurpleAccent
+import com.randallengineering.jokarztimeclock.ui.theme.SummaryFigureStyle
 import java.util.Calendar
 
 @Composable
@@ -40,7 +41,7 @@ fun GoogleSummaryCards(
     ) {
         // Today Summary Card (Google Tonal Container)
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = ExpressiveShapes.CardLeading,
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
             tonalElevation = 2.dp,
             modifier = Modifier.weight(1f)
@@ -63,7 +64,7 @@ fun GoogleSummaryCards(
                         letterSpacing = 1.sp
                     )
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = ExpressiveShapes.Pill,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                     ) {
                         Text(
@@ -79,9 +80,8 @@ fun GoogleSummaryCards(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = PayrollEngine.formatMoney(totals.todayEarnings, hide = hideMoney),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
+                    text = PayrollEngine.formatMoney(rememberCountingAmount(totals.todayEarnings), hide = hideMoney),
+                    style = SummaryFigureStyle,
                     color = EmeraldSuccess
                 )
 
@@ -94,10 +94,9 @@ fun GoogleSummaryCards(
                     )
                 }
 
-                Text(
+                RollingText(
                     text = "${String.format("%.1f", todayStats?.payableHours ?: 0.0)}h Paid",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
+                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
@@ -132,7 +131,7 @@ fun GoogleSummaryCards(
         val periodLabel = "${dStart.get(Calendar.MONTH) + 1}/${dStart.get(Calendar.DAY_OF_MONTH)} - ${dEnd.get(Calendar.MONTH) + 1}/${dEnd.get(Calendar.DAY_OF_MONTH)}"
 
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = ExpressiveShapes.CardTrailing,
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
             tonalElevation = 2.dp,
             modifier = Modifier.weight(1f)
@@ -155,7 +154,7 @@ fun GoogleSummaryCards(
                         letterSpacing = 1.sp
                     )
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = ExpressiveShapes.Pill,
                         color = EmeraldSuccess.copy(alpha = 0.15f)
                     ) {
                         Text(
@@ -171,17 +170,15 @@ fun GoogleSummaryCards(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = PayrollEngine.formatMoney(totals.periodEarnings, hide = hideMoney),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
+                    text = PayrollEngine.formatMoney(rememberCountingAmount(totals.periodEarnings), hide = hideMoney),
+                    style = SummaryFigureStyle,
                     color = EmeraldSuccess
                 )
 
                 val ptoStr = if (totals.totalPtoHoursPeriod > 0.0) " (${String.format("%.1f", totals.totalPtoHoursPeriod)}h PTO)" else ""
-                Text(
+                RollingText(
                     text = "${String.format("%.1f", totals.totalPayableHoursPeriod)}h Paid$ptoStr",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
+                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 

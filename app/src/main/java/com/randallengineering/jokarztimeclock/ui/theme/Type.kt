@@ -50,3 +50,26 @@ val Typography = Typography(
         lineHeight = 16.sp
     )
 )
+
+/**
+ * The live shift timer: deliberately the largest type on the main screen. Monospace with tabular
+ * figures so the digits never jitter sideways as they tick, and Medium weight (not Light) so the
+ * strokes stay solid on any container. Kept as its own style rather than a Typography slot so M3
+ * components that default to the display slots are unaffected.
+ */
+val TimerDisplayStyle = TextStyle(
+    fontFamily = FontFamily.Monospace,
+    fontWeight = FontWeight.Medium,
+    fontSize = 40.sp,
+    lineHeight = 48.sp,
+    fontFeatureSettings = "tnum"
+)
+
+/** Earnings figures on the summary cards (second tier, well below [TimerDisplayStyle]). */
+val SummaryFigureStyle = TextStyle(
+    fontFamily = FontFamily.Default,
+    fontWeight = FontWeight.Bold,
+    fontSize = 22.sp,
+    lineHeight = 28.sp,
+    fontFeatureSettings = "tnum"
+)

@@ -14,14 +14,17 @@ val keystoreProps = Properties().apply {
 
 android {
     namespace = "com.randallengineering.jokarztimeclock"
-    compileSdk = 35
+    // 36 is required to compile Android 16's promoted-ongoing / Live Update APIs:
+    // Notification.ProgressStyle, setShortCriticalText, hasPromotableCharacteristics()
+    // and NotificationManager.canPostPromotedNotifications().
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.randallengineering.jokarztimeclock"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 11
-        versionName = "2.7.0"
+        targetSdk = 36
+        versionCode = 12
+        versionName = "2.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -64,6 +67,8 @@ android {
     }
     buildFeatures {
         compose = true
+        // AppVersion reads BuildConfig.VERSION_NAME / VERSION_CODE so the on-screen build never goes stale.
+        buildConfig = true
     }
     testOptions {
         unitTests {
@@ -73,7 +78,8 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.15.0")
+    // 1.17.0 brings NotificationCompat.ProgressStyle and setRequestPromotedOngoing() (Live Updates).
+    implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation(platform("androidx.compose:compose-bom:2024.11.00"))

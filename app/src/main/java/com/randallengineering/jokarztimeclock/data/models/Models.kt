@@ -1,5 +1,9 @@
 package com.randallengineering.jokarztimeclock.data.models
 
+// Field names in this file ARE the on-disk and backup file format (Gson serialises them as-is, see
+// BackupCodec). Renaming or retyping a field breaks every saved state and every backup already
+// exported; add new fields with defaults instead.
+
 data class Session(
     val id: String = "sess_" + System.currentTimeMillis() + "_" + (1000..9999).random(),
     val start: Long,
@@ -36,6 +40,9 @@ data class AppSettings(
     val autoBreakDeduction: Boolean = true,
     val geofenceEnabled: Boolean = false,
     val useTaskerFallback: Boolean = false,
+    // Opt-in: ask Tasker (external API) to run this task on every clock in/out.
+    val runTaskerTaskOnClock: Boolean = false,
+    val taskerTaskName: String = "",
     val workLatitude: Double = 0.0,
     val workLongitude: Double = 0.0,
     val geofenceRadiusMeters: Float = 150f,

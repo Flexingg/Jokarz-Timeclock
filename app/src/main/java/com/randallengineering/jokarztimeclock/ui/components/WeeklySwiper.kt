@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,6 +25,7 @@ import com.randallengineering.jokarztimeclock.engine.PayrollEngine
 import com.randallengineering.jokarztimeclock.ui.theme.AmberWarning
 import com.randallengineering.jokarztimeclock.ui.theme.PurpleAccent
 import com.randallengineering.jokarztimeclock.ui.theme.RoseError
+import com.randallengineering.jokarztimeclock.ui.theme.ExpressiveShapes
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -101,7 +101,7 @@ fun GoogleWeeklySwiper(
         ) {
             items(weekDataList) { data ->
                 Surface(
-                    shape = RoundedCornerShape(24.dp),
+                    shape = ExpressiveShapes.Container,
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                     tonalElevation = 2.dp,
                     modifier = Modifier.width(260.dp)

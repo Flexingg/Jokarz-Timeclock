@@ -4,6 +4,7 @@ import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -33,6 +34,11 @@ private val SlateDarkColorScheme = darkColorScheme(
     surfaceVariant = SlateCard,
     onSurfaceVariant = TextSecondaryDark,
     outline = SlateBorder,
+    surfaceContainerLowest = SlateContainerLowest,
+    surfaceContainerLow = SlateContainerLow,
+    surfaceContainer = SlateSurface,
+    surfaceContainerHigh = SlateContainerHigh,
+    surfaceContainerHighest = SlateBorder,
     error = RoseError,
     onError = Color.White
 )
@@ -49,6 +55,11 @@ private val AmoledDarkColorScheme = darkColorScheme(
     surfaceVariant = AmoledSurface,
     onSurfaceVariant = TextSecondaryDark,
     outline = AmoledBorder,
+    surfaceContainerLowest = AmoledBlack,
+    surfaceContainerLow = AmoledSurface,
+    surfaceContainer = AmoledContainer,
+    surfaceContainerHigh = AmoledContainerHigh,
+    surfaceContainerHighest = AmoledBorder,
     error = RoseError,
     onError = Color.White
 )
@@ -65,6 +76,11 @@ private val EmeraldDarkColorScheme = darkColorScheme(
     surfaceVariant = SlateCard,
     onSurfaceVariant = TextSecondaryDark,
     outline = SlateBorder,
+    surfaceContainerLowest = SlateContainerLowest,
+    surfaceContainerLow = SlateContainerLow,
+    surfaceContainer = SlateSurface,
+    surfaceContainerHigh = SlateContainerHigh,
+    surfaceContainerHighest = SlateBorder,
     error = RoseError,
     onError = Color.White
 )
@@ -81,6 +97,11 @@ private val AmberDarkColorScheme = darkColorScheme(
     surfaceVariant = SlateCard,
     onSurfaceVariant = TextSecondaryDark,
     outline = SlateBorder,
+    surfaceContainerLowest = SlateContainerLowest,
+    surfaceContainerLow = SlateContainerLow,
+    surfaceContainer = SlateSurface,
+    surfaceContainerHigh = SlateContainerHigh,
+    surfaceContainerHighest = SlateBorder,
     error = RoseError,
     onError = Color.White
 )
@@ -97,9 +118,28 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = Color.White,
     onSurfaceVariant = Color(0xFF334155),
     outline = Color(0xFFCBD5E1),
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = Color(0xFFF8FAFC),
+    surfaceContainer = Color(0xFFEEF2F7),
+    surfaceContainerHigh = Color(0xFFE8EDF3),
+    surfaceContainerHighest = Color(0xFFE2E8F0),
     error = RoseError,
     onError = Color.White
 )
+
+/**
+ * The built-in palettes. DYNAMIC resolves here only below Android 12 (no wallpaper colours), where it
+ * falls back to Slate dark / light. Split out of [JokarzTimeclockTheme] so the timer-contrast test can
+ * check every preset.
+ */
+internal fun presetColorScheme(themeMode: ThemeMode, darkTheme: Boolean): ColorScheme = when (themeMode) {
+    ThemeMode.DYNAMIC -> if (darkTheme) SlateDarkColorScheme else LightColorScheme
+    ThemeMode.DARK -> SlateDarkColorScheme
+    ThemeMode.AMOLED -> AmoledDarkColorScheme
+    ThemeMode.EMERALD -> EmeraldDarkColorScheme
+    ThemeMode.AMBER -> AmberDarkColorScheme
+    ThemeMode.LIGHT -> LightColorScheme
+}
 
 @Composable
 fun JokarzTimeclockTheme(
@@ -108,19 +148,10 @@ fun JokarzTimeclockTheme(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    val colorScheme = when (themeMode) {
-        ThemeMode.DYNAMIC -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            } else {
-                if (darkTheme) SlateDarkColorScheme else LightColorScheme
-            }
-        }
-        ThemeMode.DARK -> SlateDarkColorScheme
-        ThemeMode.AMOLED -> AmoledDarkColorScheme
-        ThemeMode.EMERALD -> EmeraldDarkColorScheme
-        ThemeMode.AMBER -> AmberDarkColorScheme
-        ThemeMode.LIGHT -> LightColorScheme
+    val colorScheme = if (themeMode == ThemeMode.DYNAMIC && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    } else {
+        presetColorScheme(themeMode, darkTheme)
     }
 
     // Expressive-leaning shapes: generous, obviously rounded surfaces everywhere.

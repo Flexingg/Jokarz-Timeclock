@@ -9,11 +9,11 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import com.randallengineering.jokarztimeclock.AppVersion
 import com.randallengineering.jokarztimeclock.MainActivity
 import com.randallengineering.jokarztimeclock.R
 import com.randallengineering.jokarztimeclock.data.models.TimeclockState
@@ -48,6 +48,14 @@ import java.util.Locale
  * still runs. The subtitle text is a segment label ("Started 6:02 AM • 10.5h target"), not a
  * countdown, precisely so that it can stay correct without any app-side updating.
  *
+ * ## Android 16 Live Update
+ *
+ * The notification also meets every requirement for a promoted-ongoing ("Live Update") notification:
+ * ongoing, `setRequestPromotedOngoing(true)`, a content title, [NotificationCompat.ProgressStyle],
+ * no custom views, not colorized, not a group summary, on a non-MIN channel, plus the
+ * `POST_PROMOTED_NOTIFICATIONS` manifest permission. Whether the OS actually promotes it is read back
+ * by [LiveChipStatusReader], not assumed.
+ *
  * The start instant is always read back from storage ([TimeclockRepository] persists to a JSON file
  * in `filesDir`), never from a field in memory, so a killed-and-restarted process reconstructs the
  * notification with the original `when` and therefore the correct elapsed time.
@@ -64,9 +72,11 @@ class LiveShiftService : Service() {
     companion object {
         private const val TAG = "LiveShiftService"
 
-        // Updated channel ID so Android/ColorOS creates it with HIGH importance for status bar chips
-        // and Live Alerts. IMPORTANCE_HIGH + no sound = a silent, ongoing "live activity" chip.
-        const val CHANNEL_LIVE_ID = "jokarz_live_shift_chip_v4"
+        // Bumped to v5 so existing installs get a fresh channel with these settings (channel
+        // settings are immutable once created). IMPORTANCE_HIGH + no sound = silent ongoing chip;
+        // importance must not be MIN or Android refuses to promote it.
+        const val CHANNEL_LIVE_ID = "jokarz_live_shift_chip_v5"
+        const val CHANNEL_LIVE_NAME = "Live Shift Status Bar Chip"
         const val NOTIFICATION_LIVE_ID = 1003
 
         const val ACTION_CLOCK_OUT = "com.randallengineering.jokarztimeclock.action.CLOCK_OUT"
@@ -110,13 +120,14 @@ class LiveShiftService : Service() {
             try {
                 notificationManager.deleteNotificationChannel("jokarz_live_shift_channel")
                 notificationManager.deleteNotificationChannel("jokarz_live_shift_island_v3")
+                notificationManager.deleteNotificationChannel("jokarz_live_shift_chip_v4")
             } catch (e: Exception) {
                 // Ignore
             }
 
             val liveChannel = NotificationChannel(
                 CHANNEL_LIVE_ID,
-                "Live Shift Status Bar Chip",
+                CHANNEL_LIVE_NAME,
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Ongoing system chronometer for the running shift (status bar chip)"
@@ -133,7 +144,9 @@ class LiveShiftService : Service() {
         when (intent?.action) {
             ACTION_CLOCK_OUT -> {
                 repository.clockOut()
-                TaskerBridge(applicationContext).sendEvent("Clocked Out")
+                TaskerBridge(applicationContext).sendEvent(
+                    TaskerContract.EVENT_CLOCK_OUT, TaskerContract.SOURCE_NOTIFICATION, repository.state.value.settings
+                )
                 // The state collector below tears the service down on the same emission.
             }
             ACTION_TOGGLE_BREAK -> {
@@ -228,11 +241,15 @@ class LiveShiftService : Service() {
     }
 
     /**
-     * Builds the ongoing chronometer chip.
+     * Builds the ongoing chronometer chip. This is the only place the live notification is built.
      *
      * `setWhen(startMs)` + `setUsesChronometer(true)` + `setOngoing(true)` +
      * `setOnlyAlertOnce(true)` is the whole live-timer mechanism: SystemUI animates the elapsed
-     * value itself. There is no app-side ticking anywhere.
+     * value itself — in the promoted status bar chip on Android 16+, and in the shade on older
+     * versions. There is no app-side ticking anywhere.
+     *
+     * `setShortCriticalText()` is deliberately NOT used: when set, it replaces the chip's content,
+     * so the chip would show a frozen string instead of the system elapsed timer.
      */
     private fun buildNotification(state: TimeclockState): Notification {
         val startMs = state.currentSessionStart ?: System.currentTimeMillis()
@@ -290,33 +307,34 @@ class LiveShiftService : Service() {
         // Static, stable title keeps the status bar chip / capsule alive on ColorOS.
         val title = if (state.isOnBreak) "Shift Paused" else "Shift Active"
 
-        // ColorOS Aqua Dynamics / Fluid Cloud & Android 16 promoted-ongoing bundle extras.
-        val liveExtras = Bundle().apply {
-            putBoolean("android.promotedOngoing", true)
-            putBoolean("android.extra.promoted_ongoing", true)
-            putString("android.extra.ongoing_activity_type", "stopwatch")
-            putBoolean("android.substName", true)
+        // The old hand-made oplus.* / android.extra.* "capsule" extras were removed: nothing in AOSP
+        // or the ColorOS SDK reads those keys. Promotion is requested the documented way below.
 
-            putBoolean("oplus.isLiveAlert", true)
-            putBoolean("oplus.capsule.enable", true)
-            putString("oplus.liveAlert.type", "stopwatch")
-            putString("oplus_view_type", "capsule")
-            putString("capsule_type", "stopwatch")
-            putBoolean("com.oplus.notification.isLiveAlert", true)
-            putString("com.oplus.notification.capsule_type", "stopwatch")
-            putString("oplus.capsule.title", if (state.isOnBreak) "Paused" else "Shift Active")
-            putString("oplus.capsule.text", statusText)
-        }
+        // Sampled at post time, so the bar only moves when a state change re-posts (clock in, break
+        // toggle, shift edit, settings change). The live number is the system chronometer; an
+        // animated bar would need the periodic re-post this service deliberately does not have.
+        val plan = ShiftProgressScale.plan(nowMs - startMs, targetHours, settings.cliffHours)
+        val progressStyle = NotificationCompat.ProgressStyle()
+            // Segment lengths sum to ShiftProgressScale.MAX_MINUTES, which is the bar's max.
+            .setProgressSegments(plan.segmentLengths.map { NotificationCompat.ProgressStyle.Segment(it) })
+            .addProgressPoint(NotificationCompat.ProgressStyle.Point(plan.targetMark))
+            .addProgressPoint(NotificationCompat.ProgressStyle.Point(plan.cliffMark))
+            .setProgress(plan.progress)
+            // No tracker icon: there is no drawable for it, and the default track is enough.
+            .setStyledByProgress(false)
 
         return NotificationCompat.Builder(this, CHANNEL_LIVE_ID)
             .setSmallIcon(R.drawable.ic_stat_stopwatch)
             .setContentTitle(title)
             .setContentText(statusText)
-            .setSubText("Jokarz Timeclock")
+            // Carries the build, so a screenshot of the notification proves what is installed.
+            .setSubText(AppVersion.short)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
+            // Android 16 Live Update request (writes EXTRA_REQUEST_PROMOTED_ONGOING; no-op on older OS).
+            .setRequestPromotedOngoing(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(true)
             // The system chronometer: SystemUI draws and animates the elapsed time from `when`.
@@ -324,8 +342,7 @@ class LiveShiftService : Service() {
             .setChronometerCountDown(false)
             .setWhen(startMs)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(statusText))
-            .addExtras(liveExtras)
+            .setStyle(progressStyle)
             .setContentIntent(pendingContentIntent)
             .addAction(
                 0,

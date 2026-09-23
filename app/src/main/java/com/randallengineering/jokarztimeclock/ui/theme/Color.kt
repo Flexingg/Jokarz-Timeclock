@@ -25,3 +25,12 @@ val AmoledBorder = Color(0xFF262626)
 
 val CyberEmerald = Color(0xFF059669)
 val AmberGlow = Color(0xFFD97706)
+
+// Tonal container steps for the Slate-based dark palettes (the highest step is SlateBorder).
+val SlateContainerLowest = Color(0xFF0B1220)
+val SlateContainerLow = Color(0xFF172033)
+val SlateContainerHigh = Color(0xFF273449)
+
+// Tonal container steps for AMOLED (the highest step is AmoledBorder).
+val AmoledContainer = Color(0xFF121212)
+val AmoledContainerHigh = Color(0xFF1A1A1A)

@@ -14,6 +14,19 @@
          ColorOS/Android otherwise freeze or kill the foreground service and the live chronometer
          chip would stop ticking. This app is self-hosted/sideloaded, not distributed via Play. -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Android 16 Live Updates: a normal (install-time) permission the system requires before it
+         will promote the ongoing shift notification to a status bar chip. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <!-- Opt-in "run a Tasker task on clock in/out" path (TaskerIntent external API). The permission
+         is Tasker's own; the app asks for it only when the owner enables that setting, and nothing
+         else in the app depends on it. -->
+    <uses-permission android:name="net.dinglisch.android.tasker.PERMISSION_RUN_TASKS" />
+
+    <!-- Package visibility (API 30+): without this, getPackageInfo/getLaunchIntentForPackage report
+         Tasker as not installed even when it is. -->
+    <queries>
+        <package android:name="net.dinglisch.android.taskerm" />
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -50,6 +63,11 @@
                 android:value="Live ongoing shift tracking, chronometer and milestone monitoring" />
         </service>
 
+        <!-- Exported with no permission guard so Tasker can reach it. Android 8+ (API 26) does not
+             deliver implicit broadcasts to a manifest-declared receiver, so Tasker's Send Intent must
+             set Package = com.randallengineering.jokarztimeclock (explicit broadcast), or use the
+             jokarz://timeclock deep link instead. An Action-only Send Intent is silently dropped:
+             that was the "Tasker doesn't work" failure before v2.8.0. -->
         <receiver
             android:name=".engine.GeofenceBroadcastReceiver"
             android:exported="true">

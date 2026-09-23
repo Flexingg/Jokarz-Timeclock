@@ -3,6 +3,11 @@ package com.randallengineering.jokarztimeclock.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.randallengineering.jokarztimeclock.BuildConfig
+import com.randallengineering.jokarztimeclock.data.backup.BackupCodec
+import com.randallengineering.jokarztimeclock.data.backup.BackupImportPlanner
+import com.randallengineering.jokarztimeclock.data.backup.ImportMode
+import com.randallengineering.jokarztimeclock.data.backup.ImportPlan
 import com.randallengineering.jokarztimeclock.data.models.AppSettings
 import com.randallengineering.jokarztimeclock.data.models.PayMode
 import com.randallengineering.jokarztimeclock.data.models.PeriodTotals
@@ -15,6 +20,7 @@ import com.randallengineering.jokarztimeclock.engine.GeofenceManager
 import com.randallengineering.jokarztimeclock.engine.NotificationHelper
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
 import com.randallengineering.jokarztimeclock.engine.TaskerBridge
+import com.randallengineering.jokarztimeclock.engine.TaskerContract
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -110,14 +116,14 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
             audioHaptic.playClockOutSound(s.settings.soundEnabled)
             repository.clockOut()
             notificationHelper.clearLiveNotification()
-            taskerBridge.sendEvent("Clocked Out")
+            taskerBridge.sendEvent(TaskerContract.EVENT_CLOCK_OUT, TaskerContract.SOURCE_APP, s.settings)
         } else {
             audioHaptic.playClockInSound(s.settings.soundEnabled)
             repository.clockIn()
             if (s.settings.liveNotificationEnabled) {
                 notificationHelper.showOrUpdateLiveShiftNotification(state.value, System.currentTimeMillis())
             }
-            taskerBridge.sendEvent("Clocked In")
+            taskerBridge.sendEvent(TaskerContract.EVENT_CLOCK_IN, TaskerContract.SOURCE_APP, s.settings)
         }
         pushTaskerData()
     }
@@ -198,11 +204,34 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
         pushTaskerData()
     }
 
+    fun exportBackup(): String =
+        BackupCodec.encode(state.value, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, System.currentTimeMillis())
+
+    fun planImport(incoming: TimeclockState, mode: ImportMode): ImportPlan =
+        BackupImportPlanner.plan(state.value, incoming, mode, System.currentTimeMillis())
+
+    /**
+     * Re-plans against the state as it is *now* (a geofence clock-in may have happened while the
+     * confirmation dialog was open) and applies it. Returns the applied plan, or null if nothing changed.
+     */
+    fun importBackup(incoming: TimeclockState, mode: ImportMode): ImportPlan? {
+        val plan = planImport(incoming, mode)
+        if (!repository.importBackup(plan.resultingState)) return null
+        val s = state.value
+        geofenceManager.updateGeofence(s.settings)
+        if (s.isClockedIn && s.settings.liveNotificationEnabled) {
+            notificationHelper.showOrUpdateLiveShiftNotification(s, System.currentTimeMillis())
+        } else {
+            notificationHelper.clearLiveNotification()
+        }
+        pushTaskerData()
+        return plan
+    }
+
     private fun pushTaskerData() {
         val currentTotals = totals.value
         taskerBridge.pushData(
             todayStats = currentTotals.todayStats,
-            totalTechHrsPeriod = currentTotals.totalClockedHoursPeriod,
             totalActualHrsPeriod = currentTotals.totalPayableHoursPeriod,
             state = state.value
         )

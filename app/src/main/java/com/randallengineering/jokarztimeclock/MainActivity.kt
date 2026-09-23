@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -57,6 +56,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,12 +72,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.randallengineering.jokarztimeclock.data.models.PayMode
 import com.randallengineering.jokarztimeclock.data.models.Session
+import com.randallengineering.jokarztimeclock.engine.LiveChipStatusReader
 import com.randallengineering.jokarztimeclock.engine.PermissionHelper
+import com.randallengineering.jokarztimeclock.ui.components.ConfirmationBurst
 import com.randallengineering.jokarztimeclock.ui.components.GoogleClockHero
 import com.randallengineering.jokarztimeclock.ui.components.GoogleSessionLogList
 import com.randallengineering.jokarztimeclock.ui.components.GoogleSummaryCards
 import com.randallengineering.jokarztimeclock.ui.components.GoogleWeeklySwiper
+import com.randallengineering.jokarztimeclock.ui.components.LaunchedChangeEffect
 import com.randallengineering.jokarztimeclock.ui.components.LiveChipHealthCard
+import com.randallengineering.jokarztimeclock.ui.components.rememberReducedMotion
 import com.randallengineering.jokarztimeclock.ui.dialogs.AddManualShiftDialog
 import com.randallengineering.jokarztimeclock.ui.dialogs.AnalyticsDialog
 import com.randallengineering.jokarztimeclock.ui.dialogs.EditActiveTimerDialog
@@ -86,9 +90,11 @@ import com.randallengineering.jokarztimeclock.ui.dialogs.PtoManagementDialog
 import com.randallengineering.jokarztimeclock.ui.dialogs.SettingsDialog
 import com.randallengineering.jokarztimeclock.ui.dialogs.TimesheetReportDialog
 import com.randallengineering.jokarztimeclock.ui.theme.EmeraldSuccess
+import com.randallengineering.jokarztimeclock.ui.theme.ExpressiveShapes
 import com.randallengineering.jokarztimeclock.ui.theme.JokarzTimeclockTheme
 import com.randallengineering.jokarztimeclock.ui.theme.PurplePrimary
 import com.randallengineering.jokarztimeclock.ui.viewmodel.TimeclockViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 import android.Manifest
@@ -98,6 +104,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.core.content.ContextCompat
+
+/** Short tick on the clock in/out tap, through the existing AudioHapticEngine. */
+private const val HAPTIC_TAP_MS = 20L
+
+/** Second, firmer beat once the new shift state is confirmed. */
+private const val HAPTIC_CONFIRM_MS = 40L
+private const val HAPTIC_CONFIRM_DELAY_MS = 140L
 
 class MainActivity : ComponentActivity() {
 
@@ -170,6 +183,16 @@ fun GoogleTimeclockScreen(
     val activity = context as? android.app.Activity
     var notificationsGranted by remember { mutableStateOf(PermissionHelper.hasNotificationPermission(context)) }
     var batteryExempt by remember { mutableStateOf(PermissionHelper.isIgnoringBatteryOptimizations(context)) }
+    var chipSnapshot by remember { mutableStateOf(LiveChipStatusReader.read(context)) }
+
+    // Re-read the Live Update verdict when the live notification's inputs change. One-shot, not a
+    // loop: the short wait only lets the service post (or cancel) before the notification is read back.
+    LaunchedEffect(
+        state.isClockedIn, state.isOnBreak, state.currentSessionStart, state.settings.liveNotificationEnabled
+    ) {
+        delay(1500)
+        chipSnapshot = LiveChipStatusReader.read(context)
+    }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -192,6 +215,7 @@ fun GoogleTimeclockScreen(
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 notificationsGranted = PermissionHelper.hasNotificationPermission(context)
                 batteryExempt = PermissionHelper.isIgnoringBatteryOptimizations(context)
+                chipSnapshot = LiveChipStatusReader.read(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -212,6 +236,19 @@ fun GoogleTimeclockScreen(
     }
 
     var selectedSessionForEdit by remember { mutableStateOf<Pair<Int, Session>?>(null) }
+
+    // Bumped on each successful import so the confirmation badge plays for it too.
+    var importConfirmations by remember { mutableIntStateOf(0) }
+    val reducedMotion = rememberReducedMotion()
+
+    // Confirmation haptic once the shift state has actually changed (from the button, a geofence or
+    // Tasker). One-shot, just far enough after the tap haptic to be felt as a second beat.
+    LaunchedChangeEffect(state.isClockedIn to state.isOnBreak) {
+        if (state.settings.hapticEnabled) {
+            delay(HAPTIC_CONFIRM_DELAY_MS)
+            viewModel.audioHaptic.vibrate(HAPTIC_CONFIRM_MS)
+        }
+    }
 
     fun showUndoSnackbar(message: String) {
         scope.launch {
@@ -235,9 +272,9 @@ fun GoogleTimeclockScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
+                            shape = ExpressiveShapes.Cookie,
                             color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(38.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
@@ -287,6 +324,7 @@ fun GoogleTimeclockScreen(
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
                                 containerColor = if (pendingOtCount > 0) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.surfaceVariant
                             ),
+                            shape = ExpressiveShapes.Tile,
                             modifier = Modifier.size(38.dp)
                         ) {
                             Icon(
@@ -309,6 +347,7 @@ fun GoogleTimeclockScreen(
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
+                        shape = ExpressiveShapes.Tile,
                         modifier = Modifier.size(38.dp)
                     ) {
                         Icon(
@@ -329,6 +368,7 @@ fun GoogleTimeclockScreen(
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
+                        shape = ExpressiveShapes.Tile,
                         modifier = Modifier.size(38.dp)
                     ) {
                         Icon(
@@ -349,6 +389,7 @@ fun GoogleTimeclockScreen(
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
+                        shape = ExpressiveShapes.Tile,
                         modifier = Modifier.size(38.dp)
                     ) {
                         Icon(
@@ -374,11 +415,20 @@ fun GoogleTimeclockScreen(
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
+            // Always visible, straight from BuildConfig, so the owner can see which build is installed.
+            Text(
+                text = AppVersion.label,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
             Spacer(modifier = Modifier.height(6.dp))
 
             // Google Material 3 Segmented Rate Switcher & Input Capsule
             Surface(
-                shape = RoundedCornerShape(24.dp),
+                shape = ExpressiveShapes.Pill,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                 tonalElevation = 1.dp,
                 modifier = Modifier.fillMaxWidth()
@@ -390,13 +440,13 @@ fun GoogleTimeclockScreen(
                 ) {
                     // Gross vs Take Home Switcher
                     Surface(
-                        shape = RoundedCornerShape(20.dp),
+                        shape = ExpressiveShapes.Pill,
                         color = MaterialTheme.colorScheme.surface,
                         tonalElevation = 2.dp
                     ) {
                         Row(modifier = Modifier.padding(3.dp)) {
                             Surface(
-                                shape = RoundedCornerShape(16.dp),
+                                shape = ExpressiveShapes.Pill,
                                 color = if (state.displayMode == PayMode.GROSS) MaterialTheme.colorScheme.primary else Color.Transparent,
                                 modifier = Modifier.clickable { viewModel.setMode(PayMode.GROSS) }
                             ) {
@@ -410,7 +460,7 @@ fun GoogleTimeclockScreen(
                             }
 
                             Surface(
-                                shape = RoundedCornerShape(16.dp),
+                                shape = ExpressiveShapes.Pill,
                                 color = if (state.displayMode == PayMode.NET) MaterialTheme.colorScheme.primary else Color.Transparent,
                                 modifier = Modifier.clickable { viewModel.setMode(PayMode.NET) }
                             ) {
@@ -468,21 +518,32 @@ fun GoogleTimeclockScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Google Clock Hero Widget with Live Real-Time Ticking
-            GoogleClockHero(
-                state = state,
-                currentTickMs = currentTick,
-                onClockToggle = {
-                    viewModel.toggleClock()
-                    if (!state.isClockedIn) {
-                        showUndoSnackbar("Clocked In successfully.")
-                    } else {
-                        showUndoSnackbar("Clocked Out successfully.")
-                    }
-                },
-                onBreakToggle = { viewModel.toggleBreak() },
-                onEditStartClick = { showEditActiveDialog = true }
-            )
+            // Google Clock Hero Widget with Live Real-Time Ticking, plus the "done" badge that pops
+            // in its top-end corner (away from the timer) after a clock in/out or an import.
+            Box(contentAlignment = Alignment.TopEnd) {
+                GoogleClockHero(
+                    state = state,
+                    currentTickMs = currentTick,
+                    onClockToggle = {
+                        // Fire-and-forget: Vibrator.vibrate() returns immediately, so the state
+                        // change below is never held up by the haptic.
+                        if (state.settings.hapticEnabled) viewModel.audioHaptic.vibrate(HAPTIC_TAP_MS)
+                        viewModel.toggleClock()
+                        if (!state.isClockedIn) {
+                            showUndoSnackbar("Clocked In successfully.")
+                        } else {
+                            showUndoSnackbar("Clocked Out successfully.")
+                        }
+                    },
+                    onBreakToggle = { viewModel.toggleBreak() },
+                    onEditStartClick = { showEditActiveDialog = true }
+                )
+                ConfirmationBurst(
+                    trigger = state.isClockedIn to importConfirmations,
+                    reducedMotion = reducedMotion,
+                    modifier = Modifier.padding(top = 20.dp, end = 14.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -492,6 +553,8 @@ fun GoogleTimeclockScreen(
                 liveNotificationEnabled = state.settings.liveNotificationEnabled,
                 notificationsPermissionGranted = notificationsGranted,
                 batteryExempt = batteryExempt,
+                chipSnapshot = chipSnapshot,
+                versionLabel = AppVersion.label,
                 onAllowNotifications = {
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                         notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -510,7 +573,11 @@ fun GoogleTimeclockScreen(
                 },
                 onOpenNotificationSettings = {
                     activity?.let { PermissionHelper.openNotificationSettings(it) }
-                }
+                },
+                onOpenPromotionSettings = {
+                    activity?.let { LiveChipStatusReader.openPromotionSettings(it) }
+                },
+                onRecheckChip = { chipSnapshot = LiveChipStatusReader.read(context) }
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -534,7 +601,7 @@ fun GoogleTimeclockScreen(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = ExpressiveShapes.Pill,
                     colors = AssistChipDefaults.assistChipColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
                     ),
@@ -563,7 +630,7 @@ fun GoogleTimeclockScreen(
                             tint = if (pendingOtCount > 0) com.randallengineering.jokarztimeclock.ui.theme.RoseError else MaterialTheme.colorScheme.primary
                         )
                     },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = ExpressiveShapes.Pill,
                     colors = AssistChipDefaults.assistChipColors(
                         containerColor = if (pendingOtCount > 0) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
                     ),
@@ -585,7 +652,7 @@ fun GoogleTimeclockScreen(
                             tint = EmeraldSuccess
                         )
                     },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = ExpressiveShapes.Pill,
                     colors = AssistChipDefaults.assistChipColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
                     ),
@@ -607,7 +674,7 @@ fun GoogleTimeclockScreen(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = ExpressiveShapes.Pill,
                     colors = AssistChipDefaults.assistChipColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
                     ),
@@ -719,6 +786,18 @@ fun GoogleTimeclockScreen(
             onSave = { newSettings ->
                 viewModel.updateSettings(newSettings)
                 showSettingsDialog = false
+            },
+            onExportBackup = { viewModel.exportBackup() },
+            onPlanImport = { incoming, mode -> viewModel.planImport(incoming, mode) },
+            onConfirmImport = { incoming, mode ->
+                val applied = viewModel.importBackup(incoming, mode)
+                // Close Settings either way: its fields were seeded from the pre-import settings, and
+                // saving them afterwards would silently undo a REPLACE.
+                showSettingsDialog = false
+                if (applied != null) importConfirmations++
+                scope.launch {
+                    snackbarHostState.showSnackbar(applied?.let { "Imported. " + it.summary } ?: "Import failed — your data was not changed.")
+                }
             }
         )
     }

@@ -23,8 +23,9 @@ class NotificationHelper(private val context: Context) {
         const val CHANNEL_MILESTONES_ID = "jokarz_milestones_channel"
         const val CHANNEL_MILESTONES_NAME = "Shift Milestones & Alerts"
 
-        const val CHANNEL_LIVE_ID = "jokarz_live_shift_chip_v4"
-        const val CHANNEL_LIVE_NAME = "Live Shift Status Bar Chip"
+        // The live channel and notification are owned by LiveShiftService; aliased here only so
+        // there is one source of truth for the ID.
+        const val CHANNEL_LIVE_ID = LiveShiftService.CHANNEL_LIVE_ID
 
         const val NOTIFICATION_STANDARD_ID = 1001
         const val NOTIFICATION_CLIFF_ID = 1002
@@ -47,19 +48,7 @@ class NotificationHelper(private val context: Context) {
                 enableVibration(true)
             }
 
-            val liveChannel = NotificationChannel(
-                CHANNEL_LIVE_ID,
-                CHANNEL_LIVE_NAME,
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Shows live ongoing shift chronometer chip in Status Bar and Dynamic Island"
-                setShowBadge(true)
-                setSound(null, null)
-                enableVibration(false)
-            }
-
             notificationManager.createNotificationChannel(milestoneChannel)
-            notificationManager.createNotificationChannel(liveChannel)
         }
     }
 

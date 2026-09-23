@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Edit
@@ -31,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.randallengineering.jokarztimeclock.data.models.Session
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
 import com.randallengineering.jokarztimeclock.ui.theme.PurpleAccent
+import com.randallengineering.jokarztimeclock.ui.theme.ExpressiveShapes
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -55,7 +55,7 @@ fun GoogleSessionLogList(
 
         if (sortedSessions.isEmpty()) {
             Surface(
-                shape = RoundedCornerShape(24.dp),
+                shape = ExpressiveShapes.Container,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -97,7 +97,7 @@ fun GoogleSessionLogList(
                     val durStr = PayrollEngine.formatDurationShort(durMs)
 
                     Surface(
-                        shape = RoundedCornerShape(20.dp),
+                        shape = ExpressiveShapes.Container,
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                         tonalElevation = 1.dp,
                         modifier = Modifier

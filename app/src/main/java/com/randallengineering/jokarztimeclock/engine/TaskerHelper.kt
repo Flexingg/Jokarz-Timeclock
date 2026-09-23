@@ -1,60 +1,62 @@
 package com.randallengineering.jokarztimeclock.engine
 
 import android.app.AlertDialog
+import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import android.widget.Toast
 
+/**
+ * In-app Tasker setup: shows and copies the exact recipe from [TaskerContract.setupSteps].
+ *
+ * Replaces the pre-2.8.0 "one-click import", which fired an undocumented `tasker://import?file=`
+ * URI that nothing handles and bundled a hand-written Tasker XML asset that could not import cleanly
+ * (its task also ran `am broadcast` from Run Shell, which a normal app uid may not do). Both were
+ * removed; typed-in steps built from the same constants the code uses cannot drift.
+ */
 object TaskerHelper {
-    private const val TASKER_PACKAGE = "net.dinglisch.android.taskerm"
-    private const val IMPORT_URI = "tasker://import?file=jokarz_timeclock_tasker_profile.txt"
 
-    /**
-     * Attempts to launch Tasker to import the geofence profile.
-     * If Tasker is not installed, copies the profile text to the clipboard and shows a dialog.
-     */
-    fun launchTaskerImport(context: Context) {
-        val pm = context.packageManager
-        val isTaskerInstalled = try {
-            pm.getPackageInfo(TASKER_PACKAGE, 0)
-            true
-        } catch (e: Exception) {
-            false
-        }
+    private fun recipe(): String = TaskerContract.setupSteps().joinToString("\n")
 
-        if (isTaskerInstalled) {
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                data = Uri.parse(IMPORT_URI)
-                `package` = TASKER_PACKAGE
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    /** Copies the recipe to the clipboard, then shows it with Open Tasker / Share buttons. */
+    fun launchTaskerSetup(context: Context) {
+        val text = recipe()
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("Jokarz Timeclock Tasker setup", text))
+
+        AlertDialog.Builder(context)
+            .setTitle("Tasker setup (copied to clipboard)")
+            .setMessage(text)
+            .setPositiveButton("Open Tasker") { _, _ -> openTasker(context) }
+            .setNeutralButton("Share") { _, _ ->
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, "Jokarz Timeclock Tasker setup")
+                    putExtra(Intent.EXTRA_TEXT, text)
+                }
+                context.startActivity(Intent.createChooser(send, "Share Tasker setup"))
             }
-            context.startActivity(intent)
-        } else {
-            // Fallback: copy the profile text to clipboard and inform the user.
-            val profileText = readAssetProfile(context)
-            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("Tasker Profile", profileText)
-            clipboard.setPrimaryClip(clip)
-
-            AlertDialog.Builder(context)
-                .setTitle("Tasker not installed")
-                .setMessage("Tasker is not installed on this device. The geofence profile has been copied to the clipboard. Paste it into Tasker manually or install Tasker to use the one‑click import.")
-                .setPositiveButton("OK", null)
-                .show()
-        }
+            .setNegativeButton("Close", null)
+            .show()
     }
 
-    private fun readAssetProfile(context: Context): String {
-        return try {
-            context.assets.open("jokarz_timeclock_tasker_profile.txt").use { input ->
-                BufferedReader(InputStreamReader(input)).readText()
-            }
-        } catch (e: Exception) {
-            "" // Return empty string if something goes wrong.
+    private fun openTasker(context: Context) {
+        val launch = context.packageManager.getLaunchIntentForPackage(TaskerContract.TASKER_PACKAGE)
+        if (launch != null) {
+            context.startActivity(launch)
+            return
+        }
+        Toast.makeText(context, "Tasker is not installed — opening its Play Store page.", Toast.LENGTH_LONG).show()
+        val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${TaskerContract.TASKER_PACKAGE}"))
+        try {
+            context.startActivity(market)
+        } catch (e: ActivityNotFoundException) {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=${TaskerContract.TASKER_PACKAGE}"))
+            )
         }
     }
 }

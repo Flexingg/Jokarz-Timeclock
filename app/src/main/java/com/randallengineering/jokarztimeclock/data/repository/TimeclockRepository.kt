@@ -3,6 +3,7 @@ package com.randallengineering.jokarztimeclock.data.repository
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.randallengineering.jokarztimeclock.data.backup.AtomicStateWriter
 import com.randallengineering.jokarztimeclock.data.models.AppSettings
 import com.randallengineering.jokarztimeclock.data.models.AuditEntry
 import com.randallengineering.jokarztimeclock.data.models.PayMode
@@ -65,8 +66,9 @@ class TimeclockRepository private constructor(private val context: Context) {
 
     private fun persist(newState: TimeclockState) {
         try {
-            val json = gson.toJson(newState)
-            stateFile.writeText(json)
+            if (!AtomicStateWriter.write(stateFile, gson.toJson(newState))) {
+                android.util.Log.w("TimeclockRepository", "Could not persist state; previous file kept")
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -320,23 +322,21 @@ class TimeclockRepository private constructor(private val context: Context) {
         return true
     }
 
-    fun exportJson(): String {
-        return gson.toJson(_state.value)
-    }
-
-    fun importJson(json: String): Boolean {
-        return try {
-            val imported = gson.fromJson(json, TimeclockState::class.java)
-            if (imported != null) {
-                _state.value = imported
-                persist(imported)
-                true
-            } else {
-                false
-            }
+    /**
+     * Replaces the whole state with an already decoded, validated and planned backup.
+     * Disk first, memory second: if the write fails, neither the file nor the in-memory state changes.
+     */
+    fun importBackup(newState: TimeclockState): Boolean {
+        val json = try {
+            gson.toJson(newState)
         } catch (e: Exception) {
             e.printStackTrace()
-            false
+            return false
         }
+        if (!AtomicStateWriter.write(stateFile, json)) return false
+        _state.value = newState
+        // Undo entries are indices into the pre-import session list and would now hit the wrong shifts.
+        undoStack.clear()
+        return true
     }
 }

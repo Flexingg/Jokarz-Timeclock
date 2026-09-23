@@ -4,6 +4,9 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.location.Location
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,6 +26,8 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Share
@@ -40,6 +45,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -55,6 +61,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +71,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.android.gms.location.LocationServices
+import com.randallengineering.jokarztimeclock.data.backup.BackupCodec
+import com.randallengineering.jokarztimeclock.data.backup.ImportMode
+import com.randallengineering.jokarztimeclock.data.backup.ImportPlan
 import com.randallengineering.jokarztimeclock.data.models.AppSettings
 import com.randallengineering.jokarztimeclock.data.models.PaySchedule
 import com.randallengineering.jokarztimeclock.data.models.PeriodTotals
@@ -83,6 +93,9 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -475,9 +488,39 @@ fun PtoManagementDialog(
 fun SettingsDialog(
     currentSettings: AppSettings,
     onDismiss: () -> Unit,
-    onSave: (AppSettings) -> Unit
+    onSave: (AppSettings) -> Unit,
+    onExportBackup: () -> String,
+    onPlanImport: (TimeclockState, ImportMode) -> ImportPlan,
+    onConfirmImport: (TimeclockState, ImportMode) -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var importError by remember { mutableStateOf<String?>(null) }
+    var pendingImport by remember { mutableStateOf<BackupCodec.Decoded.Valid?>(null) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val text = onExportBackup()
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) { writeBackup(context, uri, text) }
+            android.widget.Toast.makeText(
+                context,
+                if (ok) "Backup exported." else "Export failed — the backup was not saved.",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            when (val decoded = withContext(Dispatchers.IO) { readBackup(context, uri) }) {
+                is BackupCodec.Decoded.Invalid -> importError = decoded.reason
+                is BackupCodec.Decoded.Valid -> pendingImport = decoded
+            }
+        }
+    }
     var schedule by remember { mutableStateOf(currentSettings.paySchedule) }
     var standardHours by remember { mutableDoubleStateOf(currentSettings.standardShiftHours) }
     var cliffHours by remember { mutableDoubleStateOf(currentSettings.cliffHours) }
@@ -497,6 +540,8 @@ fun SettingsDialog(
     var radiusMeters by remember { mutableFloatStateOf(currentSettings.geofenceRadiusMeters) }
     var addressName by remember { mutableStateOf(currentSettings.workAddressName) }
     var useTaskerFallback by remember { mutableStateOf(currentSettings.useTaskerFallback) }
+    var runTaskerTask by remember { mutableStateOf(currentSettings.runTaskerTaskOnClock) }
+    var taskerTaskName by remember { mutableStateOf(currentSettings.taskerTaskName) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -601,20 +646,9 @@ fun SettingsDialog(
                     }
 
                     if (useTaskerFallback) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        FilledTonalButton(
-                            onClick = {
-                                com.randallengineering.jokarztimeclock.engine.TaskerHelper.launchTaskerImport(context)
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Import Tasker Profile", fontSize = 12.sp)
-                        }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            "Tap to one-click import the Jokarz Timeclock profile into Tasker (Tasker must be installed).",
+                            "Set up the Tasker tasks with \"Tasker Setup Instructions\" in the TASKER section below.",
                             fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -658,6 +692,67 @@ fun SettingsDialog(
                             fontWeight = FontWeight.SemiBold
                         )
                     }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // TASKER SECTION
+                Text("TASKER", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(4.dp))
+                FilledTonalButton(
+                    onClick = { com.randallengineering.jokarztimeclock.engine.TaskerHelper.launchTaskerSetup(context) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Tasker Setup Instructions", fontSize = 12.sp)
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Run Tasker task on clock in/out", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Optional. Needs Tasker ▸ Preferences ▸ Misc ▸ Allow External Access",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Checkbox(
+                        checked = runTaskerTask,
+                        onCheckedChange = { checked ->
+                            runTaskerTask = checked
+                            val granted = context.checkSelfPermission(
+                                com.randallengineering.jokarztimeclock.engine.TaskerContract.PERMISSION_TASKER_RUN_TASKS
+                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            if (checked && !granted &&
+                                com.randallengineering.jokarztimeclock.engine.TaskerBridge.isTaskerInstalled(context)
+                            ) {
+                                // This permission belongs to Tasker, not to Android, so there is no
+                                // system runtime-permission dialog to launch — asking for one would be
+                                // a silent no-op. Tasker itself grants it once external access is on.
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "Turn on Tasker ▸ Preferences ▸ Misc ▸ Allow External Access. Tasker will then ask you to allow Jokarz Timeclock.",
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    )
+                }
+                if (runTaskerTask) {
+                    OutlinedTextField(
+                        value = taskerTaskName,
+                        onValueChange = { taskerTaskName = it },
+                        label = { Text("Exact Tasker task name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -801,6 +896,49 @@ fun SettingsDialog(
                     Text("Auto-Deduct 30m Meal After 4h", fontSize = 12.sp)
                     Checkbox(checked = autoBreak, onCheckedChange = { autoBreak = it })
                 }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text("BACKUP & RESTORE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    "Export every shift, PTO entry and setting to a file, or restore from one. " +
+                        "You will see exactly what an import changes before anything is applied.",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    FilledTonalButton(
+                        onClick = {
+                            val day = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+                            exportLauncher.launch("jokarz-timeclock-backup-$day.json")
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Export backup", fontSize = 11.sp)
+                    }
+                    FilledTonalButton(
+                        // Some file managers label .json as octet-stream, so */* keeps those files pickable.
+                        onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Import backup", fontSize = 11.sp)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    com.randallengineering.jokarztimeclock.AppVersion.label,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         },
         confirmButton = {
@@ -821,6 +959,8 @@ fun SettingsDialog(
                             autoBreakDeduction = autoBreak,
                             geofenceEnabled = geofenceEnabled,
                             useTaskerFallback = useTaskerFallback,
+                            runTaskerTaskOnClock = runTaskerTask,
+                            taskerTaskName = taskerTaskName.trim(),
                             workLatitude = workLat,
                             workLongitude = workLng,
                             geofenceRadiusMeters = radiusMeters,
@@ -836,6 +976,121 @@ fun SettingsDialog(
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
+
+    importError?.let { reason ->
+        AlertDialog(
+            onDismissRequest = { importError = null },
+            title = { Text("Import refused", fontWeight = FontWeight.Bold) },
+            text = { Text(reason + "\n\nNothing was changed.", fontSize = 13.sp) },
+            confirmButton = { TextButton(onClick = { importError = null }) { Text("OK") } }
+        )
+    }
+
+    pendingImport?.let { valid ->
+        ImportBackupConfirmDialog(
+            backup = valid,
+            onPlanImport = onPlanImport,
+            onConfirm = { mode ->
+                pendingImport = null
+                onConfirmImport(valid.state, mode)
+            },
+            onDismiss = { pendingImport = null }
+        )
+    }
+}
+
+/** Largest file we will read into memory; a real backup of years of shifts is well under 1 MB. */
+private const val MAX_BACKUP_BYTES = 20 * 1024 * 1024
+
+private fun writeBackup(context: Context, uri: Uri, text: String): Boolean = try {
+    context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray(Charsets.UTF_8)) } != null
+} catch (e: Exception) {
+    false
+}
+
+private fun readBackup(context: Context, uri: Uri): BackupCodec.Decoded = try {
+    val bytes = context.contentResolver.openInputStream(uri)?.use { input ->
+        val buffer = ByteArray(MAX_BACKUP_BYTES + 1)
+        var total = 0
+        while (total < buffer.size) {
+            val n = input.read(buffer, total, buffer.size - total)
+            if (n < 0) break
+            total += n
+        }
+        buffer.copyOf(total)
+    }
+    when {
+        bytes == null -> BackupCodec.Decoded.Invalid("The file could not be opened.")
+        bytes.size > MAX_BACKUP_BYTES -> BackupCodec.Decoded.Invalid("The file is too large to be a Jokarz Timeclock backup.")
+        else -> BackupCodec.decode(String(bytes, Charsets.UTF_8))
+    }
+} catch (e: Exception) {
+    BackupCodec.Decoded.Invalid("The file could not be read.")
+}
+
+@Composable
+private fun ImportBackupConfirmDialog(
+    backup: BackupCodec.Decoded.Valid,
+    onPlanImport: (TimeclockState, ImportMode) -> ImportPlan,
+    onConfirm: (ImportMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    // MERGE is the default because it can never end a running shift or overwrite settings.
+    var mode by remember { mutableStateOf(ImportMode.MERGE) }
+    val plan = remember(mode) { onPlanImport(backup.state, mode) }
+    val source = if (backup.sourceVersion == 0) {
+        "Legacy export (no app version or export date recorded)."
+    } else {
+        val exported = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(backup.exportedAtMs))
+        "Made by Jokarz Timeclock v${backup.appVersionName ?: "?"} on $exported (backup format v${backup.sourceVersion})."
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Import backup?", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(source, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                backup.warnings.forEach { warning ->
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("⚠ $warning", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    ImportModeButton("Replace everything", mode == ImportMode.REPLACE, Modifier.weight(1f)) {
+                        mode = ImportMode.REPLACE
+                    }
+                    ImportModeButton("Merge by id", mode == ImportMode.MERGE, Modifier.weight(1f)) {
+                        mode = ImportMode.MERGE
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    "Selected: " + (if (mode == ImportMode.REPLACE) "Replace everything" else "Merge by id"),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(plan.summary, fontSize = 12.sp)
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(mode) }) {
+                Text(if (mode == ImportMode.REPLACE) "Replace" else "Merge")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+private fun ImportModeButton(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    if (selected) {
+        Button(onClick = onClick, modifier = modifier) { Text(label, fontSize = 11.sp) }
+    } else {
+        OutlinedButton(onClick = onClick, modifier = modifier) { Text(label, fontSize = 11.sp) }
+    }
 }
 
 @Composable

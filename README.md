@@ -1,7 +1,7 @@
 # ⏱️ Jokarz Timeclock (Native Jetpack Compose & Material You)
 
-[![Release](https://img.shields.io/badge/Release-v2.7.0-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.7.0)
-[![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.7.0.apk)
+[![Release](https://img.shields.io/badge/Release-v2.8.0-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.8.0)
+[![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.0.apk)
 [![Platform](https://img.shields.io/badge/Platform-Native%20Android%20Compose-blue.svg)](https://developer.android.com/jetpack/compose)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -14,13 +14,29 @@ itself.
 
 ## 📲 Download
 
-📥 **[JokarzTimeclock-2.7.0.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.7.0.apk)**
+📥 **[JokarzTimeclock-2.8.0.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.0.apk)**
 
 > **Install**: copy the `.apk` to the phone and tap it (allow *Install unknown apps* if asked).
 > **Note on signing**: builds up to v2.6.1 were signed with a debug key that is not present on the
 > build machine, so Android may refuse to install v2.7.0 over them. If you see *"App not installed"*,
 > uninstall the old app once (it removes the local shift database) and install this build. From
-> v2.7.0 onward the release key is fixed and committed, so later updates install straight over the top.
+> v2.7.0 onward the release key is fixed and committed, so later updates install straight over the top
+> — **v2.8.0 is signed with that same release key and installs over v2.7.0 with no uninstall.**
+
+---
+
+## 🆕 v2.8.0 — what changed
+
+1. **The status bar chip is now a promoted ongoing notification** — Android 16 Dynamic Island /
+   ColorOS Aqua Dynamics aware (`setRequestPromotedOngoing` + `ProgressStyle`), with the elapsed time
+   still drawn by the system chronometer. Nothing in the app wakes up to move the clock.
+2. **Tasker integration actually works** — the old `tasker://import` link and the bundled profile file
+   (which no Tasker version reads) are gone. Real broadcasts, a real "run task" intent, and a
+   `<queries>` entry so Android 11+ can see that Tasker is installed.
+3. **Backup & Restore** — versioned, checksummed export/import with atomic writes, so a restore can
+   never half-write the state file.
+4. **Expressive Material 3 UI** — squircle/cookie/wavy custom shapes, spring motion, counting
+   numbers, and a hero timer that is plain text and never animated.
 
 ---
 
@@ -129,7 +145,7 @@ line appears while a shift is running).
 
 ### ✅ How to confirm this is working on your phone
 
-1. Install v2.7.0, open the app, and tap **Allow notifications** when the red card appears.
+1. Install v2.8.0, open the app, and tap **Allow notifications** when the red card appears.
 2. Tap **Battery: no restrictions** and accept the system dialog.
 3. Tap **Autostart settings** and enable **Auto-launch** and **Allow background running** for Jokarz
    Timeclock (ColorOS wording may differ slightly).
@@ -160,9 +176,77 @@ line appears while a shift is running).
   plus AMOLED / Slate / Emerald / Amber dark presets in Settings.
 * **History list** with per-entry duration, day and week totals, and the weekly swiper.
 * **Geofence auto clock-in/out** (Google Maps geofencing) with a Tasker fallback.
-* **Tasker integration**: broadcasts `%WorkTechHrsToday`, `%WorkActualHrsToday`,
-  `%WorkActualGrossToday`, … and events; deep links `jokarz://timeclock?action=clock_in|clock_out|toggle|break`.
+* **Tasker integration** in both directions — see [Tasker setup](#-tasker-setup) below.
 * **Analytics, PTO/holiday bank, CSV timesheet share, undo, money-privacy toggle, audio/haptics.**
+
+---
+
+## 🤖 Tasker setup
+
+The same steps are in the app: **Settings ▸ TASKER ▸ Tasker Setup Instructions**. That button copies
+the steps to the clipboard and offers *Open Tasker* and *Share*.
+
+### Direction 1: Tasker clocks you in/out (recommended: the deep link)
+
+1. Tasker ▸ TASKS ▸ **+** ▸ name it `Clock In`
+2. Add action ▸ **System** ▸ **Send Intent**
+3. Action: `android.intent.action.VIEW`
+4. Data: `jokarz://timeclock?action=clock_in`  (use `clock_out`, `toggle` or `break` for the others)
+5. Target: **Activity**; leave Package and Class empty
+6. Back ▸ the task is ready. Repeat for `Clock Out` with `jokarz://timeclock?action=clock_out`
+7. Wire these tasks to whatever profile you like (location, WiFi near, NFC, time)
+
+### Direction 2 (alternative): broadcast straight to the receiver
+
+1. Send Intent with Action `com.randallengineering.jokarztimeclock.ACTION_CLOCK_IN`
+   (or `...ACTION_CLOCK_OUT`)
+2. Target **Broadcast Receiver**
+3. **Package `com.randallengineering.jokarztimeclock`. This is mandatory.** Without it the broadcast is
+   implicit, and Android 8+ will not deliver it to this app's manifest receiver. Nothing happens and
+   nothing is logged. (Class `com.randallengineering.jokarztimeclock.engine.GeofenceBroadcastReceiver`
+   is here for people reading this document; Tasker does not need it.)
+4. Extras: none required. On `ACTION_CLOCK_OUT`, `note` (String) is optional and is stored as the note of
+   the finished entry. A clock-in does not create an entry yet, so there `note` is ignored.
+
+### Direction 3: the app tells Tasker what happened
+
+1. Tasker ▸ PROFILES ▸ **+** ▸ **Event** ▸ **System** ▸ **Intent Received**
+2. Action: `com.randallengineering.jokarztimeclock.EVENT` (or `...VARIABLES` for the hour totals)
+3. Your task then sees `%jokarzevent` (`clock_in` / `clock_out`), `%jokarzeventdetail` (`app`,
+   `tasker`, `geofence` or `notification`) and `%jokarztimestamp` (epoch ms). The variables broadcast
+   provides `%worktechhrstoday`, `%workactualhrstoday`, `%workactualgrosstoday`, `%workactualnettoday`,
+   `%workactualhrsperiod`, `%workactualgrossperiod` and `%workactualnetperiod`. These are strings with
+   two decimals, calculated exactly as before.
+
+### Direction 4 (opt-in): the app runs one of your Tasker tasks
+
+1. Tasker ▸ Preferences ▸ **Misc** ▸ **Allow External Access** → on
+2. In the app: Settings ▸ Tasker ▸ enable "Run Tasker task on clock in/out" and type the exact task name
+3. When you enable it, Android asks whether to let the app run Tasker tasks. Accept. The task receives
+   `%jokarzevent`, `%jokarzeventdetail` and `%jokarztimestamp` as local variables.
+
+This path uses Tasker's official external API (`net.dinglisch.android.tasker.ACTION_TASK`). If Tasker is
+missing, the permission is refused, or the name is blank, it logs the reason and does nothing. Clocking in
+and out never depends on it.
+
+**The app is not a Locale/Tasker plugin.** It does not implement the plugin protocol and does not appear
+in Tasker's Plugin list; everything goes through the plain intents above.
+
+### What was broken before v2.8.0
+
+* **Tasker → app did nothing.** The documented setup sent an Action-only broadcast to the receiver.
+  Since Android 8 that implicit broadcast is never delivered to a manifest receiver of an app
+  targeting API 26+, so it failed silently. Fix: use the deep link, or set Package (Direction 2).
+* **App → Tasker used invented actions.** The app broadcast `net.dinglisch.android.tasker.ACTION_EVENT`
+  and `...ACTION_VARIABLE_SET`. Neither is part of Tasker's API, and no profile listened for them. The
+  app now uses its own actions (`...EVENT`, `...VARIABLES`) for an Intent Received profile.
+* **Variable names were mangled.** The extras were keyed `%WorkTechHrsToday` etc. Tasker turns a key
+  into a variable name by lower-casing it, replacing non-alphanumerics with `_` and prefixing `a`, so
+  these arrived as `%a_worktechhrstoday`, never as the advertised name. The keys are now plain identifiers.
+* **The bundled Tasker profile could not work.** It was hand-written XML that Tasker could not import
+  cleanly. Its task ran `am broadcast` from Run Shell, which a normal app is not allowed to do. The
+  "import" button opened a `tasker://import` URI that nothing handles. All three have been removed and
+  replaced by the steps above.
 
 ---
 
@@ -205,6 +289,9 @@ $GRADLE_HOME/bin/gradle --no-daemon assembleRelease
 | In-app ColorOS/notification health card | `ui/components/LiveChipHealthCard.kt` |
 | Date+time edit dialogs | `ui/dialogs/EditShiftDialogs.kt` |
 | Persistence (JSON in `filesDir`, absolute instants) | `data/repository/TimeclockRepository.kt` |
+| Tasker action/extra names, variable maths, setup recipe (pure Kotlin, unit-tested) | `engine/TaskerContract.kt` |
+| App → Tasker broadcasts and the opt-in "run task" call | `engine/TaskerBridge.kt` |
+| In-app Tasker setup dialog (copy / Open Tasker / Share) | `engine/TaskerHelper.kt` |
 
 ## ⚠️ Not verified without a device
 
@@ -212,3 +299,8 @@ Nobody had eyes on a physical Oppo during this release, so the following are **i
 unit-tested but not device-verified**: the actual pixel rendering of the chip/capsule on ColorOS, that
 ColorOS honours the battery/autostart settings, notification-action behaviour on the real phone, and
 survival across a real reboot. The numbered checklist above is the way to confirm each one.
+
+The Tasker integration (v2.8.0) is in the same position. The action names, extra keys and variable
+maths are pinned by `TaskerContractTest`. Delivery on a phone with Tasker installed has **not** been
+tested: the deep link, the Package-restricted broadcast, the Intent Received profile, and the
+permission prompt for "run task".

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -31,6 +32,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.randallengineering.jokarztimeclock.engine.LiveChipStatus
+import com.randallengineering.jokarztimeclock.engine.LiveChipStatusReader
+import com.randallengineering.jokarztimeclock.ui.theme.ExpressiveShapes
 
 /**
  * Live-chip health card.
@@ -44,11 +48,107 @@ import androidx.compose.ui.unit.sp
  *  2. Battery-optimisation exemption — without it ColorOS may freeze the process so the chip stops.
  *  3. Autostart / "Allow background running" — ColorOS-specific app-launch control.
  *
- * Renders **nothing** when all three are satisfied, so it never adds clutter once set up (a slim
- * confirmation line is shown only while a shift is actually running).
+ * Below that, [ChipDiagnostics] reports what Android 16 actually did with the notification (read
+ * back from the posted notification by [LiveChipStatusReader]) plus the running build, so "is the
+ * chip working?" is answered by the OS rather than guessed. It is shown while a shift runs, or
+ * whenever the owner has Live Updates switched off (the one case they can fix before clocking in).
+ *
+ * The battery/notification card renders **nothing** when all is well, so it never adds clutter once
+ * set up.
  */
 @Composable
 fun LiveChipHealthCard(
+    isClockedIn: Boolean,
+    liveNotificationEnabled: Boolean,
+    notificationsPermissionGranted: Boolean,
+    batteryExempt: Boolean,
+    chipSnapshot: LiveChipStatusReader.Snapshot?,
+    versionLabel: String,
+    onAllowNotifications: () -> Unit,
+    onRequestBatteryExemption: () -> Unit,
+    onOpenAutostart: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
+    onOpenPromotionSettings: () -> Unit,
+    onRecheckChip: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val showDiagnostics = notificationsPermissionGranted && chipSnapshot != null && (
+        (isClockedIn && liveNotificationEnabled) ||
+            (chipSnapshot.apiLevel >= LiveChipStatus.PROMOTION_API && !chipSnapshot.canPostPromoted)
+        )
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        HealthWarnings(
+            isClockedIn = isClockedIn,
+            liveNotificationEnabled = liveNotificationEnabled,
+            notificationsPermissionGranted = notificationsPermissionGranted,
+            batteryExempt = batteryExempt,
+            onAllowNotifications = onAllowNotifications,
+            onRequestBatteryExemption = onRequestBatteryExemption,
+            onOpenAutostart = onOpenAutostart,
+            onOpenNotificationSettings = onOpenNotificationSettings
+        )
+        if (showDiagnostics) {
+            Spacer(modifier = Modifier.height(6.dp))
+            ChipDiagnostics(
+                snapshot = chipSnapshot,
+                versionLabel = versionLabel,
+                onOpenPromotionSettings = onOpenPromotionSettings,
+                onRecheck = onRecheckChip
+            )
+        }
+    }
+}
+
+/** The honest Android 16 promotion verdict, the build number, and the Live Updates settings button. */
+@Composable
+private fun ChipDiagnostics(
+    snapshot: LiveChipStatusReader.Snapshot,
+    versionLabel: String,
+    onOpenPromotionSettings: () -> Unit,
+    onRecheck: () -> Unit
+) {
+    val verdict = snapshot.verdict
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+        ),
+        shape = ExpressiveShapes.Container
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    if (verdict.promoted) Icons.Filled.CheckCircle else Icons.Filled.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(verdict.headline, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(verdict.detail, fontSize = 12.sp)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                "$versionLabel • Android API ${snapshot.apiLevel}",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (snapshot.apiLevel >= LiveChipStatus.PROMOTION_API) {
+                    Button(onClick = onOpenPromotionSettings) { Text("Live Updates settings", fontSize = 12.sp) }
+                }
+                TextButton(onClick = onRecheck) { Text("Re-check", fontSize = 12.sp) }
+            }
+        }
+    }
+}
+
+/** Notification-permission and ColorOS battery guidance; renders nothing when both are satisfied. */
+@Composable
+private fun HealthWarnings(
     isClockedIn: Boolean,
     liveNotificationEnabled: Boolean,
     notificationsPermissionGranted: Boolean,
@@ -92,7 +192,7 @@ fun LiveChipHealthCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f)
         ),
-        shape = MaterialTheme.shapes.extraLarge
+        shape = ExpressiveShapes.Container
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             if (needsNotifications) {

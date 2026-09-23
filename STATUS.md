@@ -91,6 +91,16 @@ assertion stands. 10 new tests; mutation-proved (flipped interpolation → 3 fai
   with `size_download=13017419`, sha256 `6cb5b803…` on disk, served and in the `.sha256` sidecar.
   The debug-signed CI artifact that was sitting in the served directory was moved to
   `/home/hermes/old-apks/` so the wrong file cannot be picked by mistake.
+* **CI (GitHub Actions, `workflow_dispatch`, runs 35882770352 / 35883305521):** `TESTS: 376 executed,
+  0 failed, 0 errored`; the keystore secret decoded (4476 bytes) and `:app:assembleRelease` succeeded
+  — **no debug fallback**; the gate ran in CI and printed `Verifies`, v2 `true`, v3 `true`, v1 `true`
+  at minSdk 23, `certificate SHA-256: c91e46ff…`, `GATE PASSED`. The CI artifact carries the same
+  certificate as the local build (`a479bfb0…` bytes — non-reproducible, which is why the workflow now
+  refuses to replace an already-published release asset).
+* **The first CI run found a real defect in the gate**: apksigner's report heading differs by
+  build-tools version, so the fingerprint read back empty on the runner. Fixed (match the tail of the
+  key; check `CN=Android Debug` on the whole report), covered by a two-format text test, and confirmed
+  in the second CI run.
 
 ## Not verified (no device)
 

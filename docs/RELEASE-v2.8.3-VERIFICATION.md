@@ -236,11 +236,36 @@ The debug-signed CI artifact that was sitting in the LAN-served directory was **
   how the single dot actually looks at phone size are **not** verified — the emulator has no Live
   Update UI. `adb shell dumpsys notification` can confirm the ProgressStyle extras but not the
   rendering.
-* The exact Channel of the 2.8.2 corruption is unknown: the mechanism (bytes changed after signing)
+* The exact origin of the 2.8.2 corruption is unknown: the mechanism (bytes changed after signing)
   is proven, but whether it was an interrupted browser download, a resumed transfer or a bad copy to
   the phone cannot be told from here — which is why the `.sha256` sidecar and the gate exist.
-* CI could not be re-run end-to-end from this machine's Gradle (it builds on GitHub); the workflow's
-  gate path is exercised by a `workflow_dispatch` run described in the STATUS file.
+
+## 7b. CI, verified in CI (GitHub Actions, `workflow_dispatch`, runs 35882770352 and 35883305521)
+
+```
+TESTS: 376 executed, 0 failed, 0 errored (46 result files)
+keystore written: 4476 bytes                    # decoded from the repository secret
+BUILD SUCCESSFUL in 52s                         # :app:assembleRelease - no debug fallback
+Verifies
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): true
+V3.0 Signer: certificate SHA-256 digest: c91e46ff61c7c5c0e61bb3dc37e4477341df68f2041f633b9c055a8e74ea8212
+v1 scheme at minSdk 23: true
+certificate SHA-256:   c91e46ff61c7c5c0e61bb3dc37e4477341df68f2041f633b9c055a8e74ea8212
+GATE PASSED
+```
+
+The CI-built APK carries the **same certificate** as the local build (`c91e46ff…`, RSA 4096) — that is
+the property that makes an update install in place whichever machine built it. Its *bytes* differ
+(the CI artifact's sha256 is `a479bfb0…`, the local one `6cb5b803…`: AGP builds embed build metadata
+and are not reproducible), which is why the workflow now **refuses to replace an already-published
+release asset** — the recorded sha256 must keep matching the file it describes.
+
+The first CI run also caught a real defect in the gate: apksigner's report heading differs between
+build-tools versions (`Signer #1 certificate SHA-256 digest:` locally vs `V3.0 Signer: certificate
+SHA-256 digest:` on the runner), so the fingerprint read back empty. The parser now matches the tail
+of the key (`certificate SHA-256 digest: *[0-9a-f]+`) and the debug-key check matches the whole
+report; both formats are covered by a text test, and the second CI run prints the fingerprint.
 
 ## 8. What still needs the owner
 

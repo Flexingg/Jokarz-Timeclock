@@ -32,11 +32,30 @@ jobs:
       - name: Set up Gradle (with caching)
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Make the Gradle wrapper executable
-        run: chmod +x ./gradlew
+      # The repo commits a wrapper, but CI must never hard-depend on ./gradlew
+      # existing: a missing wrapper is exactly what broke the first CI runs.
+      # Prefer the wrapper; otherwise fall back to the `gradle` that
+      # gradle/actions/setup-gradle put on PATH.
+      - name: Locate the Gradle entrypoint
+        id: gradle_cmd
+        run: |
+          set -e
+          if [ -f ./gradlew ]; then
+            chmod +x ./gradlew
+            echo "using the committed wrapper: ./gradlew"
+            echo "cmd=./gradlew" >> "$GITHUB_OUTPUT"
+          elif command -v gradle >/dev/null 2>&1; then
+            echo "::warning::./gradlew is missing - falling back to the gradle on PATH"
+            echo "cmd=gradle" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::no Gradle entrypoint: neither ./gradlew nor gradle is available"
+            exit 1
+          fi
 
       - name: Run the test suite
-        run: ./gradlew test --no-daemon --console=plain
+        env:
+          GRADLE_CMD: ${{ steps.gradle_cmd.outputs.cmd }}
+        run: $GRADLE_CMD test --no-daemon --console=plain
 
       # Optional release signing. Set these repository secrets to release-sign:
       #     KEYSTORE_BASE64     base64 -w0 of the .jks/.keystore file
@@ -58,17 +77,18 @@ jobs:
 
       - name: Assemble the APK
         env:
+          GRADLE_CMD: ${{ steps.gradle_cmd.outputs.cmd }}
           KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -o pipefail
-          if ./gradlew assembleRelease --no-daemon --console=plain; then
+          if $GRADLE_CMD assembleRelease --no-daemon --console=plain; then
             echo "release variant built"
           else
             echo "::warning::assembleRelease failed (likely signing) - falling back to the debug-signed APK"
-            ./gradlew assembleDebug --no-daemon --console=plain
+            $GRADLE_CMD assembleDebug --no-daemon --console=plain
           fi
 
       # Module-agnostic, so it survives a rename of :app

@@ -78,18 +78,25 @@ echo "$V1" | grep -q "true" || {
   exit 1
 }
 
-DN="$(echo "$REPORT" | grep 'Signer #1 certificate DN:' | head -1)"
-FINGERPRINT="$(echo "$REPORT" | sed -n 's/^Signer #1 certificate SHA-256 digest: *//p' | head -1)"
+DN="$(echo "$REPORT" | grep -m1 -oiE 'certificate DN: .*' | sed 's/^[^:]*: *//')"
+# apksigner's report heading differs by build-tools version ("Signer #1 certificate SHA-256 digest:"
+# vs "V3.0 Signer: certificate SHA-256 digest:"), so match the tail of the key, not the whole line -
+# a hard-coded prefix silently produced an empty fingerprint on the CI runner.
+FINGERPRINT="$(echo "$REPORT" | grep -m1 -oiE 'certificate SHA-256 digest: *[0-9a-fA-F]+' | sed 's/.*: *//')"
+if [ -z "$FINGERPRINT" ]; then
+  echo "GATE FAILED: could not read the signing certificate's SHA-256 digest out of the apksigner report" >&2
+  exit 1
+fi
 echo
-echo "certificate DN:        ${DN#*: }"
+echo "certificate DN:        $DN"
 echo "certificate SHA-256:   $FINGERPRINT"
 
-case "$DN" in
-  *"CN=Android Debug"*)
-    echo "GATE FAILED: this APK is signed with the Android DEBUG key" >&2
-    exit 1
-    ;;
-esac
+# Match on the whole report: the DN line's prefix is version-dependent, and a debug-signed APK must
+# never pass even if the DN could not be extracted.
+if echo "$REPORT" | grep -qi "CN=Android Debug"; then
+  echo "GATE FAILED: this APK is signed with the Android DEBUG key" >&2
+  exit 1
+fi
 
 echo
 echo "\$ unzip -t $APK   (archive integrity)"

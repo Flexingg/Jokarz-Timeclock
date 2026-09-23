@@ -64,6 +64,13 @@ object ShiftTimeMath {
 
     fun isValid(startMs: Long, endMs: Long): Boolean = validate(startMs, endMs) == Validation.OK
 
+    /**
+     * Fractional hours → whole milliseconds, truncated. Same arithmetic as the UI's
+     * `(hours * 3600000.0).toLong()`, so a target computed here lands on the same millisecond as
+     * the one the hero pill computes.
+     */
+    fun hoursToMs(hours: Double): Long = (hours * MS_PER_HOUR).toLong()
+
     /** Human-readable inline error for a failed validation, or null when valid. */
     fun errorMessage(validation: Validation): String? = when (validation) {
         Validation.OK -> null

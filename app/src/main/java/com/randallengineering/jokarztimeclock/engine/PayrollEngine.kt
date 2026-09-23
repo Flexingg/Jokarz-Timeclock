@@ -322,6 +322,13 @@ object PayrollEngine {
         )
     }
 
+    /**
+     * The hourly rate the app is currently displaying: gross or net, selected by
+     * [TimeclockState.displayMode]. Same selection as [calculatePeriodTotals] and the hero pill.
+     */
+    fun displayRate(state: TimeclockState): Double =
+        if (state.displayMode == PayMode.GROSS) state.grossRate else state.netRate
+
     fun formatDuration(ms: Long): String {
         val totalSecs = max(0L, ms / 1000L)
         val hours = totalSecs / 3600L

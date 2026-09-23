@@ -21,32 +21,37 @@ import com.randallengineering.jokarztimeclock.data.repository.TimeclockRepositor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 
 /**
  * Foreground service that owns the single, ongoing **status bar chronometer** for the running shift.
  *
  * ## How the timer moves
  *
- * The elapsed time you see is drawn by the Android SystemUI itself:
- * [NotificationCompat.Builder.setUsesChronometer]`(true)` + `setWhen(clockInInstant)`. SystemUI
- * re-reads `when` and animates the counter on its own; the app is not involved at all.
+ * The timer you see is drawn by the Android SystemUI itself:
+ * [NotificationCompat.Builder.setUsesChronometer]`(true)` + `setWhen(instant)`. SystemUI re-reads
+ * `when` and animates the counter on its own; the app is not involved at all. While the clock-out
+ * target ([ShiftClockOutTarget]) is still ahead, the chronometer counts **down** to it
+ * (`setChronometerCountDown(true)` + `setWhen(clockOutAt)`); once it has passed (or cannot be
+ * computed) it falls back to counting up from the session start. [LiveChipText] decides which.
  *
- * There is deliberately **no periodic refresh loop** in this class. The notification is (re)posted
- * for exactly two reasons:
- *  1. the service starts (cold start, or restart by the system after a process kill), and
+ * ## When the notification is (re)posted
+ *
+ *  1. the service starts (cold start, or restart by the system after a process kill),
  *  2. [TimeclockRepository.state] emits a *different* state — clock in, clock out, break toggle,
- *     edit of the start instant, or the live-notification preference changing.
+ *     edit of the start instant, or a settings change, and
+ *  3. a coarse **once-per-wall-clock-minute** refresh, and one wakeup at the clock-out instant.
  *
- * Both are event driven. Nothing in this file sleeps, polls or ticks, so no wakeup is required to
- * keep the clock moving — the process can be frozen, backgrounded or swiped away and the counter
- * still runs. The subtitle text is a segment label ("Started 6:02 AM • 10.5h target"), not a
- * countdown, precisely so that it can stay correct without any app-side updating.
+ * Why (3) exists: only *time* can be animated by the system. The overtime money and the elapsed
+ * text in the content line are plain strings — SystemUI cannot make them rise — so the app has to
+ * re-post them. That refresh is limited to [LiveRefreshCadence] (the next minute boundary, never
+ * sub-minute), re-posts only when the rendered [LiveChipText] actually changed, never touches the
+ * chronometer (SystemUI owns that), and stops with the service. Per-second re-posting is what broke
+ * the chip and drained the battery in 2.6.x; `NoPeriodicNotificationUpdateTest` fails the build if
+ * a faster delay or any other timer mechanism appears in this file.
  *
  * ## Android 16 Live Update
  *
@@ -64,7 +69,9 @@ class LiveShiftService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var stateCollectJob: Job? = null
+    private var minuteRefreshJob: Job? = null
     private var lastPostedSignature: String? = null
+    private var lastPostedChip: LiveChipText? = null
     private var lastClockedIn = false
     private lateinit var repository: TimeclockRepository
     private lateinit var notificationManager: NotificationManager
@@ -161,7 +168,9 @@ class LiveShiftService : Service() {
             return START_NOT_STICKY
         }
 
-        val initialNotification = buildNotification(state)
+        val nowMs = System.currentTimeMillis()
+        val initialChip = LiveChipText.build(state, nowMs)
+        val initialNotification = buildNotification(state, nowMs, initialChip)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ServiceCompat.startForeground(
@@ -176,6 +185,7 @@ class LiveShiftService : Service() {
                 startForeground(NOTIFICATION_LIVE_ID, initialNotification)
             }
             lastPostedSignature = signatureOf(state)
+            lastPostedChip = initialChip
         } catch (e: Exception) {
             // e.g. POST_NOTIFICATIONS revoked: degrade instead of crashing. The app keeps working.
             Log.w(TAG, "startForeground failed; continuing without the live chip", e)
@@ -188,14 +198,17 @@ class LiveShiftService : Service() {
     }
 
     /**
-     * Event-driven only: this collector re-posts the notification when the stored state changes.
+     * Event-driven: this collector re-posts the notification when the stored state changes.
      * If a state emission arrives that produces identical notification content, nothing is posted.
+     * It also starts / cancels the minute refresh, which only runs while clocked in with the live
+     * notification enabled.
      */
     private fun startStateMonitoring() {
         stateCollectJob?.cancel()
         stateCollectJob = serviceScope.launch {
             repository.state.collectLatest { state ->
                 if (!state.isClockedIn || state.currentSessionStart == null) {
+                    minuteRefreshJob?.cancel()
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     notificationManager.cancel(NOTIFICATION_LIVE_ID)
                     stopSelf()
@@ -203,6 +216,7 @@ class LiveShiftService : Service() {
                 }
                 if (!state.settings.liveNotificationEnabled) {
                     // Preference turned off in Settings: remove the chip, keep tracking.
+                    minuteRefreshJob?.cancel()
                     if (lastClockedIn) {
                         stopForeground(STOP_FOREGROUND_REMOVE)
                         notificationManager.cancel(NOTIFICATION_LIVE_ID)
@@ -212,12 +226,46 @@ class LiveShiftService : Service() {
                 }
                 lastClockedIn = true
 
-                val signature = signatureOf(state)
-                if (signature == lastPostedSignature) return@collectLatest
-                lastPostedSignature = signature
-                safeNotify(NOTIFICATION_LIVE_ID, buildNotification(state))
+                postIfChanged(state, System.currentTimeMillis())
+                startMinuteRefresh()
             }
         }
+    }
+
+    /**
+     * The coarse app-side refresh for the text SystemUI cannot animate (overtime money, elapsed
+     * minutes). One coroutine, woken at the next wall-clock minute boundary — or at the clock-out
+     * instant if sooner, so the chip flips from countdown to elapsed on time — never faster; see
+     * [LiveRefreshCadence]. It ends itself when the shift ends or the chip is turned off, and is
+     * cancelled in [onDestroy].
+     */
+    private fun startMinuteRefresh() {
+        if (minuteRefreshJob?.isActive == true) return
+        minuteRefreshJob = serviceScope.launch {
+            while (isActive) {
+                val nowMs = System.currentTimeMillis()
+                val clockOutAt = ShiftClockOutTarget.clockOutAtMs(repository.state.value, nowMs)
+                delay(LiveRefreshCadence.nextWakeDelayMs(nowMs, clockOutAt))
+                val state = repository.state.value
+                if (!state.isClockedIn || state.currentSessionStart == null ||
+                    !state.settings.liveNotificationEnabled
+                ) break
+                postIfChanged(state, System.currentTimeMillis())
+            }
+        }
+    }
+
+    /**
+     * Posts only when something visible changed: the state fingerprint ([signatureOf]) or the
+     * rendered [LiveChipText]. A minute in which the text is unchanged costs no post at all.
+     */
+    private fun postIfChanged(state: TimeclockState, nowMs: Long) {
+        val chip = LiveChipText.build(state, nowMs)
+        val signature = signatureOf(state)
+        if (signature == lastPostedSignature && chip == lastPostedChip) return
+        lastPostedSignature = signature
+        lastPostedChip = chip
+        safeNotify(NOTIFICATION_LIVE_ID, buildNotification(state, nowMs, chip))
     }
 
     /**
@@ -241,45 +289,23 @@ class LiveShiftService : Service() {
     }
 
     /**
-     * Builds the ongoing chronometer chip. This is the only place the live notification is built.
+     * Builds the ongoing chronometer chip. This is the only place the live notification is built,
+     * and it only assembles Android objects: the wording and the timer choice come from [chip]
+     * ([LiveChipText.build], pure and unit-tested).
      *
-     * `setWhen(startMs)` + `setUsesChronometer(true)` + `setOngoing(true)` +
-     * `setOnlyAlertOnce(true)` is the whole live-timer mechanism: SystemUI animates the elapsed
-     * value itself — in the promoted status bar chip on Android 16+, and in the shade on older
-     * versions. There is no app-side ticking anywhere.
+     * `setWhen(chip.chronometerWhenMs)` + `setUsesChronometer(true)` (+ `setChronometerCountDown(true)`
+     * while a clock-out target is ahead) + `setOngoing(true)` + `setOnlyAlertOnce(true)` is the whole
+     * live-timer mechanism: SystemUI animates the value itself — in the promoted status bar chip on
+     * Android 16+, and in the shade on older versions. There is no app-side ticking of the timer.
      *
      * `setShortCriticalText()` is deliberately NOT used: when set, it replaces the chip's content,
-     * so the chip would show a frozen string instead of the system elapsed timer.
+     * so the chip would show a frozen string instead of the system timer.
      */
-    private fun buildNotification(state: TimeclockState): Notification {
-        val startMs = state.currentSessionStart ?: System.currentTimeMillis()
-        val nowMs = System.currentTimeMillis()
+    private fun buildNotification(state: TimeclockState, nowMs: Long, chip: LiveChipText): Notification {
+        val startMs = state.currentSessionStart ?: nowMs
         val settings = state.settings
         val mealBreakToAdd = if (settings.autoBreakDeduction) settings.unpaidMealDuration else 0.0
-
-        val cal = Calendar.getInstance().apply { timeInMillis = startMs }
-        val isMonThu = cal.get(Calendar.DAY_OF_WEEK) in Calendar.MONDAY..Calendar.THURSDAY
-        val startedAt = SimpleDateFormat("h:mm a", Locale.US).format(Date(startMs))
         val targetHours = settings.standardShiftHours + mealBreakToAdd
-
-        // Segment label, NOT a countdown: stable for as long as the segment lasts, so the chip never
-        // needs a periodic refresh to stay truthful. The live elapsed value is the OS chronometer.
-        val statusText = when {
-            state.isOnBreak -> {
-                val breakStart = state.breakStartTime
-                val since = if (breakStart != null) SimpleDateFormat("h:mm a", Locale.US).format(Date(breakStart)) else null
-                if (since != null) "On break since $since" else "On break"
-            }
-            isMonThu -> {
-                val elapsedHrs = (nowMs - startMs) / 3600000.0
-                when {
-                    elapsedHrs < targetHours -> "Started $startedAt • ${trimHours(targetHours)}h target"
-                    elapsedHrs < settings.cliffHours -> "Banking buffer (unpaid) • started $startedAt"
-                    else -> "Overtime accruing (${trimHours(settings.otMultiplier)}x) • started $startedAt"
-                }
-            }
-            else -> "Weekend overtime (100%) • started $startedAt"
-        }
 
         // Tap opens the app on the main screen (single instance, cleared stack).
         val contentIntent = Intent(this, MainActivity::class.java).apply {
@@ -304,15 +330,12 @@ class LiveShiftService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Static, stable title keeps the status bar chip / capsule alive on ColorOS.
-        val title = if (state.isOnBreak) "Shift Paused" else "Shift Active"
-
         // The old hand-made oplus.* / android.extra.* "capsule" extras were removed: nothing in AOSP
         // or the ColorOS SDK reads those keys. Promotion is requested the documented way below.
 
-        // Sampled at post time, so the bar only moves when a state change re-posts (clock in, break
-        // toggle, shift edit, settings change). The live number is the system chronometer; an
-        // animated bar would need the periodic re-post this service deliberately does not have.
+        // Sampled at post time, so the bar moves only when the notification is re-posted: a state
+        // change or the minute refresh (which posts only when the text changed). The live number
+        // is the system chronometer.
         val plan = ShiftProgressScale.plan(nowMs - startMs, targetHours, settings.cliffHours)
         val progressStyle = NotificationCompat.ProgressStyle()
             // Segment lengths sum to ShiftProgressScale.MAX_MINUTES, which is the bar's max.
@@ -325,8 +348,8 @@ class LiveShiftService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_LIVE_ID)
             .setSmallIcon(R.drawable.ic_stat_stopwatch)
-            .setContentTitle(title)
-            .setContentText(statusText)
+            .setContentTitle(chip.title)
+            .setContentText(chip.contentText)
             // Carries the build, so a screenshot of the notification proves what is installed.
             .setSubText(AppVersion.short)
             .setPriority(NotificationCompat.PRIORITY_MAX)
@@ -337,10 +360,12 @@ class LiveShiftService : Service() {
             .setRequestPromotedOngoing(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(true)
-            // The system chronometer: SystemUI draws and animates the elapsed time from `when`.
+            // The system chronometer: SystemUI draws and animates the time from `when` — the
+            // countdown to clock-out while it is ahead, else elapsed since the session start.
             .setUsesChronometer(true)
-            .setChronometerCountDown(false)
-            .setWhen(startMs)
+            .setWhen(chip.chronometerWhenMs)
+            // Builder default is count-up, which is the fallback when the target is past or null.
+            .apply { if (chip.countsDown) setChronometerCountDown(true) }
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setStyle(progressStyle)
             .setContentIntent(pendingContentIntent)
@@ -357,9 +382,6 @@ class LiveShiftService : Service() {
             .build()
     }
 
-    private fun trimHours(value: Double): String =
-        if (value % 1.0 == 0.0) value.toInt().toString() else String.format(Locale.US, "%.1f", value)
-
     /**
      * Swiping the app away must not stop the shift: the service is not declared with
      * `android:stopWithTask`, so the foreground service (and therefore the chip) keeps running.
@@ -372,5 +394,6 @@ class LiveShiftService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         stateCollectJob?.cancel()
+        minuteRefreshJob?.cancel()
     }
 }

@@ -109,10 +109,14 @@ countdown, the money, the CSV import and the import-safety checks — that is th
 1. Install v2.8.2 on the Oppo and run README checklist steps 1–12; report which step fails.
 2. Decide the 2026-09-21 reading: keep the recomputed **10h 36m 49s** (current) or adopt the export's
    **34h 36m** by treating a derived-duration disagreement of ~24 h as a next-day clock-out.
-3. `.github/workflows/build-apk.yml` calls `chmod +x ./gradlew`, but **`gradlew` has never been
-   committed** (only `gradlew.bat`), so that workflow cannot work. A delegate batch fixed it with a
-   wrapper-or-PATH fallback; the change was **reverted out of this release to keep it in scope**. It is
-   a two-line fix whenever the owner wants it.
+3. **Concurrent work on this repo, and a CI finding.** Two commits landed from *another* job while this
+   pass was running — `429effd` (a GitHub Actions build workflow) and `fdb1e92` (a real Gradle wrapper
+   + a wrapper-agnostic workflow), both at ~07:51 and ~08:03. This run's release commit is newer than
+   both and contains them as ancestors; nothing of either was lost. The finding that prompted them is
+   real: the repo had **no committed `gradlew`** (only `gradlew.bat`) and the wrapper `.properties`
+   pointed at a Windows-local `file:///C:/Users/Jonat/...` distribution, so every CI run died on
+   `chmod: cannot access ./gradlew`. That is now fixed by `fdb1e92`, by whoever is working in parallel
+   — this run deliberately kept its own release commit to the three requested areas.
 4. `waveSpeed` for the wavy indicator deserves a device look; and if the owner wants the wiggle to run
    the full arc, `ShiftRing.amplitude` is the one constant to change.
 5. Pre-existing, untouched, outside this pass: `LiveStatsDrawer` ignores `autoBreakDeduction` in its

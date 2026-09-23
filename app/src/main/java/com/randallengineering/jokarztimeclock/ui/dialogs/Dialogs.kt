@@ -73,6 +73,8 @@ import com.randallengineering.jokarztimeclock.data.models.Session
 import com.randallengineering.jokarztimeclock.data.models.ThemeMode
 import com.randallengineering.jokarztimeclock.data.models.TimeclockState
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
+import com.randallengineering.jokarztimeclock.engine.PermissionHelper
+import com.randallengineering.jokarztimeclock.engine.ShiftTimeMath
 import com.randallengineering.jokarztimeclock.ui.components.WeeklyChart
 import com.randallengineering.jokarztimeclock.ui.theme.EmeraldSuccess
 import com.randallengineering.jokarztimeclock.ui.theme.PurplePrimary
@@ -150,246 +152,6 @@ fun MaterialDatePickerDialog(
 }
 
 @Composable
-fun EditActiveTimerDialog(
-    currentStartMs: Long,
-    onDismiss: () -> Unit,
-    onSave: (newStartMs: Long) -> Unit
-) {
-    val cal = Calendar.getInstance().apply { timeInMillis = currentStartMs }
-    var selectedHour by remember { mutableStateOf(cal.get(Calendar.HOUR_OF_DAY)) }
-    var selectedMinute by remember { mutableStateOf(cal.get(Calendar.MINUTE)) }
-    var showTimePicker by remember { mutableStateOf(false) }
-
-    val sdfTime = SimpleDateFormat("h:mm a", Locale.US)
-    val timeDisplay = remember(selectedHour, selectedMinute) {
-        val c = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, selectedHour)
-            set(Calendar.MINUTE, selectedMinute)
-        }
-        sdfTime.format(c.time)
-    }
-
-    if (showTimePicker) {
-        MaterialTimePickerDialog(
-            title = "Select Shift Start Time",
-            initialHour = selectedHour,
-            initialMinute = selectedMinute,
-            onDismiss = { showTimePicker = false },
-            onConfirm = { h, m ->
-                selectedHour = h
-                selectedMinute = m
-                showTimePicker = false
-            }
-        )
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Edit Active Shift Start", fontWeight = FontWeight.Bold) },
-        text = {
-            Column {
-                Text(
-                    text = "Tap below to adjust today's clock-in time using the native clock:",
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showTimePicker = true }
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.AccessTime,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = timeDisplay,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val newCal = Calendar.getInstance().apply {
-                        timeInMillis = currentStartMs
-                        set(Calendar.HOUR_OF_DAY, selectedHour)
-                        set(Calendar.MINUTE, selectedMinute)
-                        set(Calendar.SECOND, 0)
-                        set(Calendar.MILLISECOND, 0)
-                    }
-                    onSave(newCal.timeInMillis)
-                }
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
-}
-
-@Composable
-fun EditSessionDialog(
-    session: Session,
-    onDismiss: () -> Unit,
-    onSave: (startMs: Long, endMs: Long, note: String, isPutInSystem: Boolean) -> Unit,
-    onDelete: () -> Unit
-) {
-    val calStart = Calendar.getInstance().apply { timeInMillis = session.start }
-    val calEnd = Calendar.getInstance().apply { timeInMillis = session.end }
-
-    var startMs by remember { mutableLongStateOf(session.start) }
-    var endMs by remember { mutableLongStateOf(session.end) }
-    var noteText by remember { mutableStateOf(session.note) }
-    var isPutInSystem by remember { mutableStateOf(session.isPutInSystem) }
-
-    var showStartTimePicker by remember { mutableStateOf(false) }
-    var showEndTimePicker by remember { mutableStateOf(false) }
-
-    val sdf = SimpleDateFormat("EEE, MMM d • h:mm a", Locale.US)
-
-    if (showStartTimePicker) {
-        val c = Calendar.getInstance().apply { timeInMillis = startMs }
-        MaterialTimePickerDialog(
-            title = "Select Shift Start Time",
-            initialHour = c.get(Calendar.HOUR_OF_DAY),
-            initialMinute = c.get(Calendar.MINUTE),
-            onDismiss = { showStartTimePicker = false },
-            onConfirm = { h, m ->
-                c.set(Calendar.HOUR_OF_DAY, h)
-                c.set(Calendar.MINUTE, m)
-                startMs = c.timeInMillis
-                showStartTimePicker = false
-            }
-        )
-    }
-
-    if (showEndTimePicker) {
-        val c = Calendar.getInstance().apply { timeInMillis = endMs }
-        MaterialTimePickerDialog(
-            title = "Select Shift End Time",
-            initialHour = c.get(Calendar.HOUR_OF_DAY),
-            initialMinute = c.get(Calendar.MINUTE),
-            onDismiss = { showEndTimePicker = false },
-            onConfirm = { h, m ->
-                c.set(Calendar.HOUR_OF_DAY, h)
-                c.set(Calendar.MINUTE, m)
-                endMs = c.timeInMillis
-                showEndTimePicker = false
-            }
-        )
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Edit Completed Shift", fontWeight = FontWeight.Bold) },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Text("START TIME", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(4.dp))
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.fillMaxWidth().clickable { showStartTimePicker = true }
-                ) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.AccessTime, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(sdf.format(Date(startMs)), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text("END TIME", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(4.dp))
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.fillMaxWidth().clickable { showEndTimePicker = true }
-                ) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.AccessTime, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(sdf.format(Date(endMs)), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = noteText,
-                    onValueChange = { noteText = it },
-                    label = { Text("Shift Notes / Job Code") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.fillMaxWidth().clickable { isPutInSystem = !isPutInSystem }
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Entered into Payroll System", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            Text("Check when overtime has been submitted", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Checkbox(checked = isPutInSystem, onCheckedChange = { isPutInSystem = it })
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onSave(startMs, endMs, noteText.trim(), isPutInSystem)
-                }
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            Row {
-                TextButton(
-                    onClick = onDelete,
-                    colors = ButtonDefaults.textButtonColors(contentColor = RoseError)
-                ) {
-                    Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                    Text("Delete")
-                }
-                Spacer(modifier = Modifier.width(4.dp))
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-            }
-        }
-    )
-}
-
-@Composable
 fun AddManualShiftDialog(
     onDismiss: () -> Unit,
     onSave: (startMs: Long, endMs: Long, note: String, isPutInSystem: Boolean) -> Unit
@@ -409,9 +171,12 @@ fun AddManualShiftDialog(
     val sdfDate = SimpleDateFormat("EEE, MMM d, yyyy", Locale.US)
     val sdfTime = SimpleDateFormat("h:mm a", Locale.US)
 
+    val validation = ShiftTimeMath.validate(startMs, endMs)
+    val errorText = ShiftTimeMath.errorMessage(validation)
+
     if (showDatePicker) {
         MaterialDatePickerDialog(
-            initialDateMs = startMs,
+            initialDateMs = ShiftTimeMath.toPickerDateMs(startMs),
             onDismiss = { showDatePicker = false },
             onConfirm = { dateMillis ->
                 val calOrig = Calendar.getInstance().apply { timeInMillis = startMs }
@@ -517,6 +282,16 @@ fun AddManualShiftDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                if (errorText != null) {
+                    Text(
+                        text = errorText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
                 OutlinedTextField(
                     value = noteText,
                     onValueChange = { noteText = it },
@@ -548,6 +323,7 @@ fun AddManualShiftDialog(
         },
         confirmButton = {
             Button(
+                enabled = errorText == null,
                 onClick = {
                     onSave(startMs, endMs, noteText.trim(), isPutInSystem)
                 }
@@ -981,6 +757,45 @@ fun SettingsDialog(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text("Shift Milestone Notifications", fontSize = 12.sp)
                     Checkbox(checked = notificationsEnabled, onCheckedChange = { notificationsEnabled = it })
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("LIVE CHIP & COLOROS BACKGROUND", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    "The status bar timer is drawn by Android. If it ever stops moving, these are the " +
+                        "phone settings that control it — ColorOS can freeze a background app unless it " +
+                        "is exempt from battery optimisation and allowed to run at startup.",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    FilledTonalButton(
+                        onClick = { (context as? android.app.Activity)?.let { PermissionHelper.openNotificationSettings(it) } },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Notifications", fontSize = 11.sp)
+                    }
+                    FilledTonalButton(
+                        onClick = {
+                            val act = context as? android.app.Activity
+                            if (act != null) {
+                                if (!PermissionHelper.requestIgnoreBatteryOptimizations(act)) {
+                                    PermissionHelper.openAutostartSettings(act)
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Battery", fontSize = 11.sp)
+                    }
+                    FilledTonalButton(
+                        onClick = { (context as? android.app.Activity)?.let { PermissionHelper.openAutostartSettings(it) } },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Autostart", fontSize = 11.sp)
+                    }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text("Auto-Deduct 30m Meal After 4h", fontSize = 12.sp)

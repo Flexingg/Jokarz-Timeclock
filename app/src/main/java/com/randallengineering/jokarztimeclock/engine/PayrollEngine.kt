@@ -108,7 +108,7 @@ object PayrollEngine {
             }
             PaySchedule.WEEKLY -> {
                 val start = getStartOfWeekDate(date)
-                start + (6L * 86400000L) + (86399999L)
+                ShiftTimeMath.addDays(start, 7) - 1L
             }
             PaySchedule.MONTHLY -> {
                 val lastDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
@@ -121,7 +121,7 @@ object PayrollEngine {
             }
             PaySchedule.BI_WEEKLY -> {
                 val start = getStartOfPayPeriod(date, state)
-                start + (13L * 86400000L) + (86399999L)
+                ShiftTimeMath.addDays(start, 14) - 1L
             }
         }
     }
@@ -129,11 +129,15 @@ object PayrollEngine {
     fun calculateDayStats(dayStartMs: Long, excludeActive: Boolean = false, state: TimeclockState): DayStats {
         var clockedMs = 0L
         var totalBreakMs = 0L
-        val dayEndMs = dayStartMs + 86400000L
+        // Local midnight boundaries in the phone's timezone. Never `dayStartMs + 86_400_000`:
+        // that raw step drifts by an hour across a DST transition and mis-buckets entries.
+        val dayEndMs = ShiftTimeMath.endOfDayMs(dayStartMs)
 
         state.sessions.forEach { sess ->
             if (sess.start in dayStartMs until dayEndMs) {
-                clockedMs += (sess.end - sess.start)
+                // Absolute instants: a stop on the following calendar day (overnight shift)
+                // yields a positive duration, never negative and never zero.
+                clockedMs += ShiftTimeMath.durationMs(sess.start, sess.end)
                 totalBreakMs += sess.breakMs
             }
         }
@@ -238,13 +242,29 @@ object PayrollEngine {
         val startOfWeek = getStartOfWeekDate(Date(targetTimeMs))
 
         var totalPrevBanked = 0.0
-        var cur = startOfWeek
-        while (cur < targetStartOfDay) {
-            val stats = calculateDayStats(cur, excludeActive = true, state = state)
-            totalPrevBanked += stats.bankedHours
-            cur += 86400000L
+        localMidnightsBetween(startOfWeek, targetStartOfDay).forEach { dayStart ->
+            totalPrevBanked += calculateDayStats(dayStart, excludeActive = true, state = state).bankedHours
         }
         return totalPrevBanked
+    }
+
+    /**
+     * Every local midnight from [fromMs] up to but excluding [toMsExclusiveMs].
+     *
+     * Day arithmetic goes through [ShiftTimeMath.addDays] (Calendar-based) instead of adding a raw
+     * 86_400_000 ms step, so a DST transition cannot shift the boundaries by an hour and silently
+     * mis-bucket entries. Both [getPreviousBankedHoursForCurrentWeek] and [calculatePeriodTotals]
+     * aggregate through this function.
+     */
+    fun localMidnightsBetween(fromMs: Long, toMsExclusiveMs: Long): List<Long> {
+        val days = ArrayList<Long>()
+        var day = ShiftTimeMath.startOfDayMs(fromMs)
+        var guard = 0
+        while (day < toMsExclusiveMs && guard++ < 5000) {
+            days.add(day)
+            day = ShiftTimeMath.addDays(day, 1)
+        }
+        return days
     }
 
     fun calculatePeriodTotals(state: TimeclockState): PeriodTotals {
@@ -259,8 +279,8 @@ object PayrollEngine {
         var totalPtoHoursPeriod = 0.0
         var todayStats: DayStats? = null
 
-        var cur = startOfPeriod
-        while (cur <= minOf(startOfDay, endOfPeriod)) {
+        val lastDay = minOf(startOfDay, endOfPeriod)
+        localMidnightsBetween(startOfPeriod, ShiftTimeMath.addDays(lastDay, 1)).forEach { cur ->
             val stats = calculateDayStats(cur, excludeActive = false, state = state)
             totalClockedMsPeriod += stats.clockedMs
             totalClockedHoursPeriod += stats.clockedHours
@@ -271,7 +291,6 @@ object PayrollEngine {
             if (cur == startOfDay) {
                 todayStats = stats
             }
-            cur += 86400000L
         }
 
         val rate = if (state.displayMode == PayMode.GROSS) state.grossRate else state.netRate
@@ -330,7 +349,7 @@ object PayrollEngine {
      * Fri-Sun: All worked hours are overtime.
      */
     fun calculateSessionOt(session: com.randallengineering.jokarztimeclock.data.models.Session, state: TimeclockState): Double {
-        val durationMs = session.end - session.start
+        val durationMs = ShiftTimeMath.durationMs(session.start, session.end)
         if (durationMs <= 0) return 0.0
         val cal = Calendar.getInstance().apply { timeInMillis = session.start }
         val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)

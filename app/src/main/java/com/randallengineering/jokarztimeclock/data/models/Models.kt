@@ -19,7 +19,8 @@ data class PtoEntry(
 )
 
 data class AppSettings(
-    val theme: ThemeMode = ThemeMode.DARK,
+    // Light is the default look; dark / AMOLED / dynamic remain one tap away in Settings.
+    val theme: ThemeMode = ThemeMode.LIGHT,
     val paySchedule: PaySchedule = PaySchedule.SEMI_MONTHLY,
     val biweeklyAnchorDate: String = "2026-01-05",
     val standardShiftHours: Double = 10.0,

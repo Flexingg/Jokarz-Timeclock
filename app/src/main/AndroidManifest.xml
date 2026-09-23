@@ -10,6 +10,10 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Required so the in-app button can send the owner to the battery-optimisation exemption.
+         ColorOS/Android otherwise freeze or kill the foreground service and the live chronometer
+         chip would stop ticking. This app is self-hosted/sideloaded, not distributed via Play. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:allowBackup="true"

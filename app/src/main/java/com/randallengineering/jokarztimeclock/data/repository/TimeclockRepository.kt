@@ -10,6 +10,7 @@ import com.randallengineering.jokarztimeclock.data.models.PtoEntry
 import com.randallengineering.jokarztimeclock.data.models.Session
 import com.randallengineering.jokarztimeclock.data.models.TimeclockState
 import com.randallengineering.jokarztimeclock.data.models.UndoAction
+import com.randallengineering.jokarztimeclock.engine.ShiftTimeMath
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -145,6 +146,12 @@ class TimeclockRepository(private val context: Context) {
     }
 
     fun addManualSession(startMs: Long, endMs: Long, note: String = "", breakMs: Long = 0L, isPutInSystem: Boolean = false) {
+        // Defence in depth: the edit UI validates with ShiftTimeMath, and nothing invalid
+        // (stop at/before start) can be persisted even if a caller bypasses the UI.
+        if (!ShiftTimeMath.isValid(startMs, endMs)) {
+            android.util.Log.w("TimeclockRepository", "Rejected invalid session start=$startMs end=$endMs")
+            return
+        }
         val newSession = Session(start = startMs, end = endMs, breakMs = breakMs, note = note, isPutInSystem = isPutInSystem)
         pushUndo(UndoAction(type = "ADD_SESSION", session = newSession))
         updateState {
@@ -156,6 +163,10 @@ class TimeclockRepository(private val context: Context) {
     }
 
     fun updateSession(index: Int, startMs: Long, endMs: Long, note: String = "", breakMs: Long = 0L, isPutInSystem: Boolean? = null) {
+        if (!ShiftTimeMath.isValid(startMs, endMs)) {
+            android.util.Log.w("TimeclockRepository", "Rejected invalid session edit start=$startMs end=$endMs")
+            return
+        }
         val sessions = _state.value.sessions.toMutableList()
         if (index in sessions.indices) {
             val old = sessions[index]

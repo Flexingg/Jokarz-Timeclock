@@ -3,7 +3,9 @@ package com.randallengineering.jokarztimeclock.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -11,9 +13,11 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import com.randallengineering.jokarztimeclock.data.models.ThemeMode
 
@@ -99,7 +103,7 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun JokarzTimeclockTheme(
-    themeMode: ThemeMode = ThemeMode.DARK,
+    themeMode: ThemeMode = ThemeMode.LIGHT,
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
@@ -119,19 +123,31 @@ fun JokarzTimeclockTheme(
         ThemeMode.LIGHT -> LightColorScheme
     }
 
+    // Expressive-leaning shapes: generous, obviously rounded surfaces everywhere.
+    val shapes = Shapes(
+        extraSmall = RoundedCornerShape(10.dp),
+        small = RoundedCornerShape(14.dp),
+        medium = RoundedCornerShape(18.dp),
+        large = RoundedCornerShape(24.dp),
+        extraLarge = RoundedCornerShape(30.dp)
+    )
+
     val view = LocalView.current
+    val useLightStatusBarIcons = colorScheme.background.luminance() > 0.5f
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.background.toArgb()
             window.navigationBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = (themeMode == ThemeMode.LIGHT)
+            // Derived from the resolved scheme, so DYNAMIC + a light wallpaper also gets dark icons.
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = useLightStatusBarIcons
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        shapes = shapes,
         content = content
     )
 }

@@ -114,4 +114,96 @@ object PermissionHelper {
         }
         activity.startActivity(intent)
     }
+
+    // ------------------------------------------------------------------ live chronometer health
+
+    /**
+     * True when the ongoing chronometer chip is allowed to appear. On Android 13+ this is the
+     * runtime POST_NOTIFICATIONS permission; below that the right is granted at install time.
+     */
+    fun hasNotificationPermission(context: Context): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) return true
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    /**
+     * ColorOS/Android may freeze or kill background work unless the app is exempt from battery
+     * optimisation. Without the exemption the foreground service (and therefore the live
+     * chronometer) can stop ticking after a while.
+     */
+    fun isIgnoringBatteryOptimizations(context: Context): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M) return true
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+        return powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
+    }
+
+    /**
+     * Sends the owner to the system dialog that exempts this app from battery optimisation.
+     * Returns false when no activity can handle the request, in which case the caller should fall
+     * back to [openAppSettings].
+     */
+    fun requestIgnoreBatteryOptimizations(activity: Activity): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M) return false
+        return try {
+            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = android.net.Uri.fromParts("package", activity.packageName, null)
+            }
+            activity.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Opens this app's notification settings (channel toggles, importance). */
+    fun openNotificationSettings(activity: Activity) {
+        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+            putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName)
+        }
+        try {
+            activity.startActivity(intent)
+        } catch (e: Exception) {
+            openAppSettings(activity)
+        }
+    }
+
+    /**
+     * Tries to open the OEM "Autostart / Allow background running" screen. ColorOS, OxygenOS, MIUI
+     * and EMUI each use their own component name, so every candidate is attempted and the first one
+     * that resolves wins; otherwise the app details screen is opened (where the owner can find
+     * "Battery" / "App launch" himself). Never throws.
+     */
+    fun openAutostartSettings(activity: Activity): Boolean {
+        val candidates = listOf(
+            // ColorOS / OPPO / Realme
+            Intent().setClassName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity"),
+            Intent().setClassName("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity"),
+            Intent().setClassName("com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity"),
+            Intent().setClassName("com.coloros.oppoguardelf", "com.coloros.powermanager.fuelgaue.PowerUsageModelActivity"),
+            // OxygenOS / OnePlus
+            Intent().setClassName("com.oneplus.security", "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity"),
+            // MIUI / Xiaomi
+            Intent().setClassName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"),
+            // EMUI / Huawei
+            Intent().setClassName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"),
+            // Samsung
+            Intent().setClassName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity")
+        )
+
+        for (intent in candidates) {
+            try {
+                if (activity.packageManager.resolveActivity(intent, 0) != null) {
+                    activity.startActivity(intent)
+                    return true
+                }
+            } catch (e: Exception) {
+                // Try the next candidate.
+            }
+        }
+        openAppSettings(activity)
+        return false
+    }
 }

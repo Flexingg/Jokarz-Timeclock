@@ -4,6 +4,12 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// Release signing. Kept identical for every build so the owner can install over the previous APK.
+val keystoreProps = java.util.Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 android {
     namespace = "com.randallengineering.jokarztimeclock"
     compileSdk = 35
@@ -12,12 +18,23 @@ android {
         applicationId = "com.randallengineering.jokarztimeclock"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "2.6.1"
+        versionCode = 11
+        versionName = "2.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            if (keystoreProps.isNotEmpty() && keystoreProps.getProperty("storeFile") != null) {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
         }
     }
 
@@ -28,7 +45,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            // Falls back to the debug key when keystore.properties is absent (CI / fresh clone).
+            signingConfig = if (keystoreProps.isNotEmpty() && keystoreProps.getProperty("storeFile") != null) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
     compileOptions {

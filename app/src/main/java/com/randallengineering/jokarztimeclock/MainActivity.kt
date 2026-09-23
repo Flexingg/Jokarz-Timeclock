@@ -72,10 +72,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.randallengineering.jokarztimeclock.data.models.PayMode
 import com.randallengineering.jokarztimeclock.data.models.Session
+import com.randallengineering.jokarztimeclock.engine.PermissionHelper
 import com.randallengineering.jokarztimeclock.ui.components.GoogleClockHero
 import com.randallengineering.jokarztimeclock.ui.components.GoogleSessionLogList
 import com.randallengineering.jokarztimeclock.ui.components.GoogleSummaryCards
 import com.randallengineering.jokarztimeclock.ui.components.GoogleWeeklySwiper
+import com.randallengineering.jokarztimeclock.ui.components.LiveChipHealthCard
 import com.randallengineering.jokarztimeclock.ui.dialogs.AddManualShiftDialog
 import com.randallengineering.jokarztimeclock.ui.dialogs.AnalyticsDialog
 import com.randallengineering.jokarztimeclock.ui.dialogs.EditActiveTimerDialog
@@ -119,9 +121,8 @@ class MainActivity : ComponentActivity() {
                     Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 )
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    permissions.add(Manifest.permission.POST_NOTIFICATIONS)
-                }
+                // POST_NOTIFICATIONS is requested separately, with an explanation, from the
+                // live-chip health card (see LiveChipHealthCard) so the owner knows why.
                 permissionLauncher.launch(permissions.toTypedArray())
             }
 
@@ -163,6 +164,39 @@ fun GoogleTimeclockScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // ---- Live-chip health (notifications + ColorOS battery management) ----------------------
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val activity = context as? android.app.Activity
+    var notificationsGranted by remember { mutableStateOf(PermissionHelper.hasNotificationPermission(context)) }
+    var batteryExempt by remember { mutableStateOf(PermissionHelper.isIgnoringBatteryOptimizations(context)) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        notificationsGranted = granted
+        // Degraded mode: the app is fully usable without it — only the live chip is lost.
+        if (!granted) {
+            scope.launch {
+                snackbarHostState.showSnackbar(
+                    "Notifications stay off — clocking in/out still works, the live status bar timer will not show."
+                )
+            }
+        }
+    }
+
+    // Re-check whenever the screen comes back (the owner may have changed settings meanwhile).
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                notificationsGranted = PermissionHelper.hasNotificationPermission(context)
+                batteryExempt = PermissionHelper.isIgnoringBatteryOptimizations(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Dialog visibility states
     var showEditActiveDialog by remember { mutableStateOf(false) }
@@ -448,6 +482,35 @@ fun GoogleTimeclockScreen(
                 },
                 onBreakToggle = { viewModel.toggleBreak() },
                 onEditStartClick = { showEditActiveDialog = true }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // ColourOS / battery / notification reality check — renders only when something is wrong.
+            LiveChipHealthCard(
+                isClockedIn = state.isClockedIn,
+                liveNotificationEnabled = state.settings.liveNotificationEnabled,
+                notificationsPermissionGranted = notificationsGranted,
+                batteryExempt = batteryExempt,
+                onAllowNotifications = {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        activity?.let { PermissionHelper.openNotificationSettings(it) }
+                    }
+                },
+                onRequestBatteryExemption = {
+                    val launched = activity?.let { PermissionHelper.requestIgnoreBatteryOptimizations(it) } ?: false
+                    if (launched != true) {
+                        activity?.let { PermissionHelper.openAutostartSettings(it) }
+                    }
+                },
+                onOpenAutostart = {
+                    activity?.let { PermissionHelper.openAutostartSettings(it) }
+                },
+                onOpenNotificationSettings = {
+                    activity?.let { PermissionHelper.openNotificationSettings(it) }
+                }
             )
 
             Spacer(modifier = Modifier.height(14.dp))

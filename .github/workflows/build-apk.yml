@@ -1,0 +1,98 @@
+name: Build APK
+
+# Builds the installable APK in CI instead of on a local machine (the local box
+# has a full swap and has been OOM-killed mid-build before). Runs on every v* tag
+# and can be triggered by hand:
+#     gh workflow run build-apk.yml --repo Flexingg/Jokarz-Timeclock
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Test and assemble
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle (with caching)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make the Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Run the test suite
+        run: ./gradlew test --no-daemon --console=plain
+
+      # Optional release signing. Set these repository secrets to release-sign:
+      #     KEYSTORE_BASE64     base64 -w0 of the .jks/.keystore file
+      #     KEYSTORE_PASSWORD   keystore password
+      #     KEY_ALIAS           key alias
+      #     KEY_PASSWORD        key password
+      # Without them the workflow still builds; it falls back to the debug-signed
+      # APK, which installs over other debug-signed builds of this app.
+      - name: Decode the signing keystore (self-disables when unset)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "no signing secrets configured - skipping release keystore"
+            exit 0
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          echo "keystore written: $(stat -c %s "$RUNNER_TEMP/release.keystore") bytes"
+
+      - name: Assemble the APK
+        env:
+          KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -o pipefail
+          if ./gradlew assembleRelease --no-daemon --console=plain; then
+            echo "release variant built"
+          else
+            echo "::warning::assembleRelease failed (likely signing) - falling back to the debug-signed APK"
+            ./gradlew assembleDebug --no-daemon --console=plain
+          fi
+
+      # Module-agnostic, so it survives a rename of :app
+      - name: Verify an APK actually exists
+        run: |
+          set -e
+          APK=$(find . -path ./.git -prune -o -name '*.apk' -print | head -1)
+          if [ -z "$APK" ]; then
+            echo "::error::no APK was produced"; exit 1
+          fi
+          echo "APK: $APK"
+          ls -la "$APK"
+          sha256sum "$APK"
+
+      - name: Upload the APK as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: timeclock-apk
+          path: '**/*.apk'
+          if-no-files-found: error
+
+      - name: Attach the APK to the GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: '**/*.apk'
+          fail_on_unmatched_files: true

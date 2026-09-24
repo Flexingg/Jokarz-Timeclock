@@ -30,13 +30,12 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
@@ -184,21 +183,14 @@ private fun ActiveShiftStage(
         contentAlignment = Alignment.Center,
         modifier = Modifier.size(264.dp)
     ) {
-        // The official expressive wavy indicator owns the wiggle: its active arc undulates and the
-        // wave travels on its own. Reduced motion flattens it (zero amplitude, zero wave speed).
-        // Stroke weight stays at the ring's existing 12dp; wavelength and gap are the M3 tokens.
-        val density = LocalDensity.current
-        val ringStroke = remember(density) { with(density) { Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round) } }
-        CircularWavyProgressIndicator(
+        // A clean, smooth circular arc with rounded caps matching Google Clock styling.
+        CircularProgressIndicator(
             progress = { progress },
             color = ringColor,
             trackColor = plateColor,
-            stroke = ringStroke,
-            trackStroke = ringStroke,
-            gapSize = WavyProgressIndicatorDefaults.CircularIndicatorTrackGapSize,
-            amplitude = ShiftRing.amplitude(reducedMotion),
-            wavelength = WavyProgressIndicatorDefaults.CircularWavelength,
-            waveSpeed = if (reducedMotion) 0.dp else WavyProgressIndicatorDefaults.CircularWavelength,
+            strokeWidth = 12.dp,
+            strokeCap = StrokeCap.Round,
+            gapSize = 0.dp,
             modifier = Modifier.size(256.dp)
         )
 

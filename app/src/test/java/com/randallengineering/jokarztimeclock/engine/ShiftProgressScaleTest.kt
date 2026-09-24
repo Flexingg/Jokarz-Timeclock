@@ -69,6 +69,7 @@ class ShiftProgressScaleTest {
     @Test
     fun existingInvariantsStillHold() {
         val early = plan(minutes(60))
+        assertEquals(listOf(max), early.segmentLengths)
         assertEquals(max, early.segmentLengths.sum())
         assertEquals(60, early.progress)
 

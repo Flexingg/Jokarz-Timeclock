@@ -28,7 +28,9 @@ data class LiveChipText(
     /** True → `setChronometerCountDown(true)`; false → the plain elapsed chronometer. */
     val countsDown: Boolean,
     /** [ShiftClockOutTarget.clockOutAtMs], null when not clocked in. */
-    val clockOutAtMs: Long?
+    val clockOutAtMs: Long?,
+    /** Amount of money earned today (e.g. "$496.00 earned"), or null if hidden or unclocked. */
+    val earnedMoneyText: String? = null
 ) {
     companion object {
 
@@ -69,23 +71,28 @@ data class LiveChipText(
                     val totalMins = (remainingMs + 59_999L) / 60_000L
                     val hours = totalMins / 60L
                     val mins = totalMins % 60L
-                    val timeStr = if (hours > 0L) "${hours}h ${mins}m" else "${mins}m"
-                    if (state.isOnBreak) "Paused • $timeStr" else "Leave in $timeStr"
+                    String.format(Locale.US, "%d:%02d", hours, mins)
                 }
                 past -> {
-                    if (state.isOnBreak) "Paused • Can leave" else "Can leave now"
+                    "0:00"
                 }
                 else -> {
                     if (state.isOnBreak) "Shift Paused" else "Shift Active"
                 }
             }
 
+            val earnedMoneyText = if (!state.settings.hideMoneyAmounts && state.isClockedIn) {
+                val totals = PayrollEngine.calculatePeriodTotals(state, nowMs)
+                "${PayrollEngine.formatMoney(totals.todayEarnings)} earned"
+            } else null
+
             return LiveChipText(
                 title = title,
                 contentText = parts.joinToString(" • "),
                 chronometerWhenMs = if (countsDown) target else startMs,
                 countsDown = countsDown,
-                clockOutAtMs = target
+                clockOutAtMs = target,
+                earnedMoneyText = earnedMoneyText
             )
         }
 

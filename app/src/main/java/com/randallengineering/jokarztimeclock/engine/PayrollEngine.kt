@@ -126,7 +126,12 @@ object PayrollEngine {
         }
     }
 
-    fun calculateDayStats(dayStartMs: Long, excludeActive: Boolean = false, state: TimeclockState): DayStats {
+    fun calculateDayStats(
+        dayStartMs: Long,
+        excludeActive: Boolean = false,
+        state: TimeclockState,
+        nowMs: Long = System.currentTimeMillis()
+    ): DayStats {
         var clockedMs = 0L
         var totalBreakMs = 0L
         // Local midnight boundaries in the phone's timezone. Never `dayStartMs + 86_400_000`:
@@ -145,10 +150,10 @@ object PayrollEngine {
         if (!excludeActive && state.isClockedIn && state.currentSessionStart != null) {
             val curStart = state.currentSessionStart
             if (curStart in dayStartMs until dayEndMs) {
-                clockedMs += (System.currentTimeMillis() - curStart)
+                clockedMs += (nowMs - curStart).coerceAtLeast(0L)
                 var curBreak = state.accumulatedBreakMs
                 if (state.isOnBreak && state.breakStartTime != null) {
-                    curBreak += (System.currentTimeMillis() - state.breakStartTime)
+                    curBreak += (nowMs - state.breakStartTime).coerceAtLeast(0L)
                 }
                 totalBreakMs += curBreak
             }
@@ -267,10 +272,11 @@ object PayrollEngine {
         return days
     }
 
-    fun calculatePeriodTotals(state: TimeclockState): PeriodTotals {
-        val startOfDay = getStartOfDay()
-        val startOfPeriod = getStartOfPayPeriod(Date(), state)
-        val endOfPeriod = getEndOfPayPeriod(Date(), state)
+    fun calculatePeriodTotals(state: TimeclockState, nowMs: Long = System.currentTimeMillis()): PeriodTotals {
+        val now = Date(nowMs)
+        val startOfDay = ShiftTimeMath.startOfDayMs(nowMs)
+        val startOfPeriod = getStartOfPayPeriod(now, state)
+        val endOfPeriod = getEndOfPayPeriod(now, state)
 
         var totalClockedMsPeriod = 0L
         var totalClockedHoursPeriod = 0.0
@@ -281,7 +287,7 @@ object PayrollEngine {
 
         val lastDay = minOf(startOfDay, endOfPeriod)
         localMidnightsBetween(startOfPeriod, ShiftTimeMath.addDays(lastDay, 1)).forEach { cur ->
-            val stats = calculateDayStats(cur, excludeActive = false, state = state)
+            val stats = calculateDayStats(cur, excludeActive = false, state = state, nowMs = nowMs)
             totalClockedMsPeriod += stats.clockedMs
             totalClockedHoursPeriod += stats.clockedHours
             totalPayableHoursPeriod += stats.payableHours

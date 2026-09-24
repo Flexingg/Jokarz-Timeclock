@@ -4,10 +4,9 @@ package com.randallengineering.jokarztimeclock.engine
  * The fixed scale behind the live notification's `ProgressStyle` bar. Pure Kotlin, no Android, so
  * the numbers are unit-testable.
  *
- * The bar is three segments: paid shift (0 → target), unpaid bank buffer (target → cliff) and
- * overtime (cliff → [MAX_MINUTES]). `ProgressStyle`'s max is the sum of its segment lengths, so the
- * segments always add up to exactly [MAX_MINUTES]; the max never depends on "now" or on settings,
- * which keeps two posts of the same state identical.
+ * The bar is a single continuous segment of [MAX_MINUTES] without internal divider lines.
+ * `ProgressStyle`'s max is the sum of its segment lengths, which is exactly [MAX_MINUTES]; the max
+ * never depends on "now" or on settings, which keeps two posts of the same state identical.
  */
 object ShiftProgressScale {
 
@@ -41,7 +40,8 @@ object ShiftProgressScale {
             progress = progress,
             targetMark = target,
             cliffMark = cliff,
-            segmentLengths = listOf(target, cliff - target, MAX_MINUTES - cliff),
+            // Single continuous segment of MAX_MINUTES so no divider lines cut the bar.
+            segmentLengths = listOf(MAX_MINUTES),
             pointMark = pointMark(elapsedMs, targetHours),
             // Full line in overtime, so the fill agrees with the dot pinned at the far right.
             barFill = if (reachedTarget(elapsedMs, targetHours)) MAX_MINUTES else progress

@@ -1,7 +1,7 @@
 # ⏱️ Jokarz Timeclock (Native Jetpack Compose & Material You)
 
-[![Release](https://img.shields.io/badge/Release-v2.9.1-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.9.1)
-[![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.9.1.apk)
+[![Release](https://img.shields.io/badge/Release-v2.9.2-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.9.2)
+[![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.9.2.apk)
 [![Platform](https://img.shields.io/badge/Platform-Native%20Android%20Compose-blue.svg)](https://developer.android.com/jetpack/compose)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -14,12 +14,12 @@ itself.
 
 ## 📲 Download
 
-📥 **[JokarzTimeclock-2.9.1.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.9.1.apk)**
+📥 **[JokarzTimeclock-2.9.2.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.9.2.apk)**
 
-**LAN, from the workshop PC:** `http://192.168.1.146:4310/JokarzTimeclock-2.9.1.apk`
-(the same directory serves `JokarzTimeclock-2.9.1.apk.sha256` — check it, see below)
+**LAN, from the workshop PC:** `http://192.168.1.146:4310/JokarzTimeclock-2.9.2.apk`
+(the same directory serves `JokarzTimeclock-2.9.2.apk.sha256` — check it, see below)
 
-> **Install (v2.9.1)**: this one installs **in place, over v2.9.0 / v2.8.3** — same canonical key, no uninstall,
+> **Install (v2.9.2)**: this one installs **in place, over v2.9.1 / v2.9.0 / v2.8.3** — same canonical key, no uninstall,
 > shift history kept. Copy the `.apk` to the phone and tap it (allow *Install unknown apps* if asked).
 >
 > ### ⚠️ This release needs ONE uninstall first — then never again

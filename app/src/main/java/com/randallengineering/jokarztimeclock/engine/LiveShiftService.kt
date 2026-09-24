@@ -13,7 +13,6 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
-import com.randallengineering.jokarztimeclock.AppVersion
 import com.randallengineering.jokarztimeclock.MainActivity
 import com.randallengineering.jokarztimeclock.R
 import com.randallengineering.jokarztimeclock.data.models.TimeclockState
@@ -355,8 +354,11 @@ class LiveShiftService : Service() {
             .setSmallIcon(R.drawable.ic_stat_stopwatch)
             .setContentTitle(chip.title)
             .setContentText(chip.contentText)
-            // Carries the build, so a screenshot of the notification proves what is installed.
-            .setSubText(AppVersion.short)
+            .apply {
+                if (chip.earnedMoneyText != null) {
+                    setSubText(chip.earnedMoneyText)
+                }
+            }
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

@@ -369,10 +369,12 @@ fun PtoManagementDialog(
 
     if (showDatePicker) {
         MaterialDatePickerDialog(
-            initialDateMs = dateMs,
+            // The picker speaks UTC-midnight dates; PTO is bucketed by LOCAL day (PayrollEngine), so
+            // convert both ways or a US time zone books the hours on the previous day.
+            initialDateMs = ShiftTimeMath.toPickerDateMs(dateMs),
             onDismiss = { showDatePicker = false },
             onConfirm = {
-                dateMs = it
+                dateMs = ShiftTimeMath.applyPickedDate(dateMs, it)
                 showDatePicker = false
             }
         )

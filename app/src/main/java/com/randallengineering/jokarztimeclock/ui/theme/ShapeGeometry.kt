@@ -181,7 +181,10 @@ internal object ShapeGeometry {
         return out
     }
 
-    /** Point-wise interpolation; [t] outside 0..1 extrapolates (a spring's overshoot reads as jelly). */
+    /**
+     * Point-wise interpolation. The maths extrapolates for [t] outside 0..1, but the app never feeds it
+     * one: [ShapeMorph.at] clamps to 0..1 and all motion is non-overshooting (see AppMotion).
+     */
     fun lerpOutline(from: FloatArray, to: FloatArray, t: Float, out: FloatArray) {
         for (i in out.indices) out[i] = from[i] + (to[i] - from[i]) * t
     }

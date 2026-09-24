@@ -16,8 +16,8 @@ import androidx.compose.ui.unit.dp
 /*
  * Expressive shapes for the main screen.
  *
- * material3 1.3.1 predates the Material 3 Expressive shape library (MaterialShapes / RoundedPolygon
- * morphing), so these are hand-built Shape implementations. The maths lives in ShapeGeometry (pure,
+ * Hand-built Shape implementations from before the app moved to material3 1.5 (which has
+ * MaterialShapes); the hero now uses the official shapes, these remain for the confirmation badge. The maths lives in ShapeGeometry (pure,
  * unit tested); this file only turns its polylines into Bézier Paths.
  *
  * Allocation: shapes are data classes, so an equal shape on the next recomposition is recognised and
@@ -176,8 +176,8 @@ class ShapeMorph(private val start: SmoothOutlineShape, private val end: SmoothO
     private var from = FloatArray(0)
     private var to = FloatArray(0)
 
-    /** The shape at [progress] (0 = start, 1 = end; a spring's small overshoot is allowed). */
-    fun at(progress: Float): Shape = MorphFrame(this, progress.coerceIn(-0.25f, 1.25f))
+    /** The shape at [progress] (0 = start, 1 = end). Clamped: the morph never extrapolates past either shape. */
+    fun at(progress: Float): Shape = MorphFrame(this, progress.coerceIn(0f, 1f))
 
     internal fun outlineAt(progress: Float, size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
         if (size.width <= 0f || size.height <= 0f) return Outline.Rectangle(size.toRect())

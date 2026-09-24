@@ -3,11 +3,9 @@ package com.randallengineering.jokarztimeclock.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
-import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -19,113 +17,150 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import com.randallengineering.jokarztimeclock.data.models.ThemeMode
 
-private val SlateDarkColorScheme = darkColorScheme(
+/**
+ * The shared role wiring for the dark presets. Accents always travel through scheme roles, so a
+ * composable never names a palette colour: success = `tertiary`, break / banking = `secondary`,
+ * overtime / destructive = `error`.
+ */
+private fun presetDarkScheme(
+    primary: Color,
+    primaryContainer: Color,
+    onPrimaryContainer: Color,
+    surface: Color,
+    background: Color,
+    outline: Color,
+    containerLowest: Color,
+    containerLow: Color,
+    container: Color,
+    containerHigh: Color,
+    containerHighest: Color
+): ColorScheme = darkColorScheme(
+    primary = primary,
+    onPrimary = White,
+    primaryContainer = primaryContainer,
+    onPrimaryContainer = onPrimaryContainer,
+    secondary = AmberWarning,
+    onSecondary = Black,
+    secondaryContainer = AmberContainer,
+    onSecondaryContainer = AmberOnContainer,
+    tertiary = EmeraldSuccess,
+    onTertiary = Black,
+    tertiaryContainer = EmeraldContainer,
+    onTertiaryContainer = EmeraldOnContainer,
+    surface = surface,
+    onSurface = TextPrimaryDark,
+    background = background,
+    onBackground = TextPrimaryDark,
+    surfaceVariant = surface,
+    onSurfaceVariant = TextSecondaryDark,
+    outline = outline,
+    outlineVariant = SlateOutlineVariant,
+    surfaceContainerLowest = containerLowest,
+    surfaceContainerLow = containerLow,
+    surfaceContainer = container,
+    surfaceContainerHigh = containerHigh,
+    surfaceContainerHighest = containerHighest,
+    error = RoseError,
+    onError = White,
+    errorContainer = RoseErrorContainer,
+    onErrorContainer = RoseOnErrorContainer
+)
+
+private val SlateDarkColorScheme = presetDarkScheme(
     primary = PurplePrimary,
-    onPrimary = Color.White,
     primaryContainer = PurplePrimaryDark,
     onPrimaryContainer = PurpleAccent,
     surface = SlateSurface,
-    onSurface = TextPrimaryDark,
     background = SlateBackground,
-    onBackground = TextPrimaryDark,
-    surfaceVariant = SlateCard,
-    onSurfaceVariant = TextSecondaryDark,
     outline = SlateBorder,
-    surfaceContainerLowest = SlateContainerLowest,
-    surfaceContainerLow = SlateContainerLow,
-    surfaceContainer = SlateSurface,
-    surfaceContainerHigh = SlateContainerHigh,
-    surfaceContainerHighest = SlateBorder,
-    error = RoseError,
-    onError = Color.White
+    containerLowest = SlateContainerLowest,
+    containerLow = SlateContainerLow,
+    container = SlateSurface,
+    containerHigh = SlateContainerHigh,
+    containerHighest = SlateBorder
 )
 
-private val AmoledDarkColorScheme = darkColorScheme(
+private val AmoledDarkColorScheme = presetDarkScheme(
     primary = PurplePrimary,
-    onPrimary = Color.White,
     primaryContainer = PurplePrimaryDark,
     onPrimaryContainer = PurpleAccent,
     surface = AmoledSurface,
-    onSurface = TextPrimaryDark,
     background = AmoledBlack,
-    onBackground = TextPrimaryDark,
-    surfaceVariant = AmoledSurface,
-    onSurfaceVariant = TextSecondaryDark,
     outline = AmoledBorder,
-    surfaceContainerLowest = AmoledBlack,
-    surfaceContainerLow = AmoledSurface,
-    surfaceContainer = AmoledContainer,
-    surfaceContainerHigh = AmoledContainerHigh,
-    surfaceContainerHighest = AmoledBorder,
-    error = RoseError,
-    onError = Color.White
+    containerLowest = AmoledBlack,
+    containerLow = AmoledSurface,
+    container = AmoledContainer,
+    containerHigh = AmoledContainerHigh,
+    containerHighest = AmoledBorder
 )
 
-private val EmeraldDarkColorScheme = darkColorScheme(
+private val EmeraldDarkColorScheme = presetDarkScheme(
     primary = CyberEmerald,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFF064E3B),
-    onPrimaryContainer = Color(0xFF6EE7B7),
+    primaryContainer = EmeraldContainer,
+    onPrimaryContainer = EmeraldOnContainer,
     surface = SlateSurface,
-    onSurface = TextPrimaryDark,
     background = SlateBackground,
-    onBackground = TextPrimaryDark,
-    surfaceVariant = SlateCard,
-    onSurfaceVariant = TextSecondaryDark,
     outline = SlateBorder,
-    surfaceContainerLowest = SlateContainerLowest,
-    surfaceContainerLow = SlateContainerLow,
-    surfaceContainer = SlateSurface,
-    surfaceContainerHigh = SlateContainerHigh,
-    surfaceContainerHighest = SlateBorder,
-    error = RoseError,
-    onError = Color.White
+    containerLowest = SlateContainerLowest,
+    containerLow = SlateContainerLow,
+    container = SlateSurface,
+    containerHigh = SlateContainerHigh,
+    containerHighest = SlateBorder
 )
 
-private val AmberDarkColorScheme = darkColorScheme(
+private val AmberDarkColorScheme = presetDarkScheme(
     primary = AmberGlow,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFF78350F),
-    onPrimaryContainer = Color(0xFFFCD34D),
+    primaryContainer = AmberContainer,
+    onPrimaryContainer = AmberOnContainer,
     surface = SlateSurface,
-    onSurface = TextPrimaryDark,
     background = SlateBackground,
-    onBackground = TextPrimaryDark,
-    surfaceVariant = SlateCard,
-    onSurfaceVariant = TextSecondaryDark,
     outline = SlateBorder,
-    surfaceContainerLowest = SlateContainerLowest,
-    surfaceContainerLow = SlateContainerLow,
-    surfaceContainer = SlateSurface,
-    surfaceContainerHigh = SlateContainerHigh,
-    surfaceContainerHighest = SlateBorder,
-    error = RoseError,
-    onError = Color.White
+    containerLowest = SlateContainerLowest,
+    containerLow = SlateContainerLow,
+    container = SlateSurface,
+    containerHigh = SlateContainerHigh,
+    containerHighest = SlateBorder
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = PurplePrimary,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFE9D5FF),
-    onPrimaryContainer = PurplePrimaryDark,
-    surface = Color(0xFFF8FAFC),
-    onSurface = Color(0xFF0F172A),
-    background = Color(0xFFF1F5F9),
-    onBackground = Color(0xFF0F172A),
-    surfaceVariant = Color.White,
-    onSurfaceVariant = Color(0xFF334155),
-    outline = Color(0xFFCBD5E1),
-    surfaceContainerLowest = Color.White,
-    surfaceContainerLow = Color(0xFFF8FAFC),
-    surfaceContainer = Color(0xFFEEF2F7),
-    surfaceContainerHigh = Color(0xFFE8EDF3),
-    surfaceContainerHighest = Color(0xFFE2E8F0),
-    error = RoseError,
-    onError = Color.White
+/** The canonical Material 3 light scheme from the owner's brief (every value pinned by ThemeSchemeTest). */
+internal val LightColorScheme = lightColorScheme(
+    primary = LightPrimary,
+    onPrimary = LightOnPrimary,
+    primaryContainer = LightPrimaryContainer,
+    onPrimaryContainer = LightOnPrimaryContainer,
+    inversePrimary = LightInversePrimary,
+    secondary = LightSecondary,
+    onSecondary = LightOnSecondary,
+    secondaryContainer = LightSecondaryContainer,
+    onSecondaryContainer = LightOnSecondaryContainer,
+    tertiary = LightTertiary,
+    onTertiary = LightOnTertiary,
+    tertiaryContainer = LightTertiaryContainer,
+    onTertiaryContainer = LightOnTertiaryContainer,
+    background = LightSurface,
+    onBackground = LightOnSurface,
+    surface = LightSurface,
+    onSurface = LightOnSurface,
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightOnSurfaceVariant,
+    inverseSurface = LightInverseSurface,
+    inverseOnSurface = LightInverseOnSurface,
+    error = LightError,
+    onError = LightOnError,
+    errorContainer = LightErrorContainer,
+    onErrorContainer = LightOnErrorContainer,
+    outline = LightOutline,
+    outlineVariant = LightOutlineVariant,
+    surfaceBright = LightSurface,
+    surfaceDim = LightSurfaceDim,
+    surfaceContainerLowest = LightSurfaceContainerLowest,
+    surfaceContainerLow = LightSurfaceContainerLow,
+    surfaceContainer = LightSurfaceContainer,
+    surfaceContainerHigh = LightSurfaceContainerHigh,
+    surfaceContainerHighest = LightSurfaceContainerHighest
 )
 
 /**
@@ -142,6 +177,9 @@ internal fun presetColorScheme(themeMode: ThemeMode, darkTheme: Boolean): ColorS
     ThemeMode.LIGHT -> LightColorScheme
 }
 
+/** The app's motion scheme: standard (no bounce, no overshoot). */
+internal val AppMotionScheme: MotionScheme = MotionScheme.standard()
+
 @Composable
 fun JokarzTimeclockTheme(
     themeMode: ThemeMode = ThemeMode.LIGHT,
@@ -155,15 +193,6 @@ fun JokarzTimeclockTheme(
         presetColorScheme(themeMode, darkTheme)
     }
 
-    // Expressive-leaning shapes: generous, obviously rounded surfaces everywhere.
-    val shapes = Shapes(
-        extraSmall = RoundedCornerShape(10.dp),
-        small = RoundedCornerShape(14.dp),
-        medium = RoundedCornerShape(18.dp),
-        large = RoundedCornerShape(24.dp),
-        extraLarge = RoundedCornerShape(30.dp)
-    )
-
     val view = LocalView.current
     val useLightStatusBarIcons = colorScheme.background.luminance() > 0.5f
     if (!view.isInEditMode) {
@@ -176,13 +205,14 @@ fun JokarzTimeclockTheme(
         }
     }
 
-    // Material 3 Expressive: same colours, typography and shapes, plus the expressive motion scheme
-    // (MaterialTheme.motionScheme) that the hero's springs read.
+    // Material 3 Expressive colours, type and shapes on the STANDARD motion scheme: the owner wants
+    // smooth, non-overshooting motion, so nothing here may use MotionScheme.expressive() (whose
+    // spatial springs bounce). ThemeMotionTest pins this.
     MaterialExpressiveTheme(
         colorScheme = colorScheme,
-        motionScheme = MotionScheme.expressive(),
+        motionScheme = AppMotionScheme,
         typography = Typography,
-        shapes = shapes,
+        shapes = AppShapes,
         content = content
     )
 }

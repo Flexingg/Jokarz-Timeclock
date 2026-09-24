@@ -8,7 +8,6 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,58 +18,51 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.rounded.NightsStay
+import androidx.compose.material.icons.rounded.AccessTime
+import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.FileDownload
+import androidx.compose.material.icons.rounded.FileUpload
+import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.MyLocation
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.google.android.gms.location.LocationServices
 import com.randallengineering.jokarztimeclock.data.backup.BackupCodec
 import com.randallengineering.jokarztimeclock.data.backup.ImportMode
@@ -84,22 +76,34 @@ import com.randallengineering.jokarztimeclock.data.models.PaySchedule
 import com.randallengineering.jokarztimeclock.data.models.PeriodTotals
 import com.randallengineering.jokarztimeclock.data.models.PtoEntry
 import com.randallengineering.jokarztimeclock.data.models.PtoType
-import com.randallengineering.jokarztimeclock.data.models.Session
 import com.randallengineering.jokarztimeclock.data.models.ThemeMode
 import com.randallengineering.jokarztimeclock.data.models.TimeclockState
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
 import com.randallengineering.jokarztimeclock.engine.PermissionHelper
 import com.randallengineering.jokarztimeclock.engine.ShiftTimeMath
 import com.randallengineering.jokarztimeclock.ui.components.WeeklyChart
-import com.randallengineering.jokarztimeclock.ui.theme.EmeraldSuccess
-import com.randallengineering.jokarztimeclock.ui.theme.PurplePrimary
-import com.randallengineering.jokarztimeclock.ui.theme.RoseError
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.randallengineering.jokarztimeclock.ui.components.ScaledButton
+import com.randallengineering.jokarztimeclock.ui.components.ScaledFilledTonalButton
+import com.randallengineering.jokarztimeclock.ui.components.ScaledIconButton
+import com.randallengineering.jokarztimeclock.ui.components.ScaledOutlinedButton
+import com.randallengineering.jokarztimeclock.ui.components.ScaledTextButton
+import com.randallengineering.jokarztimeclock.ui.components.expressiveClickable
+import com.randallengineering.jokarztimeclock.ui.components.ExpressiveAlertDialog
+import com.randallengineering.jokarztimeclock.ui.components.DialogBackButton
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import com.randallengineering.jokarztimeclock.engine.InputValidation
+import com.randallengineering.jokarztimeclock.ui.components.ConnectedAction
+import com.randallengineering.jokarztimeclock.ui.components.ConnectedButtonGroup
+import com.randallengineering.jokarztimeclock.ui.components.ConnectedToggleGroup
+import com.randallengineering.jokarztimeclock.ui.theme.ExpressiveButtonSize
+import com.randallengineering.jokarztimeclock.ui.theme.Transparent
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -117,7 +121,7 @@ fun MaterialTimePickerDialog(
         is24Hour = false
     )
 
-    AlertDialog(
+    ExpressiveAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title, fontWeight = FontWeight.Bold) },
         text = {
@@ -129,14 +133,14 @@ fun MaterialTimePickerDialog(
             }
         },
         confirmButton = {
-            Button(onClick = {
+            ScaledButton(onClick = {
                 onConfirm(timeState.hour, timeState.minute)
             }) {
                 Text("Confirm")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            DialogBackButton(onClick = onDismiss)
         }
     )
 }
@@ -155,58 +159,60 @@ fun MaterialDatePickerDialog(
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            Button(onClick = {
+            ScaledButton(onClick = {
                 dateState.selectedDateMillis?.let { onConfirm(it) }
             }) {
                 Text("Confirm")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            DialogBackButton(onClick = onDismiss)
         }
     ) {
         DatePicker(state = dateState)
     }
 }
 
+/**
+ * Adds a shift that was worked but not clocked. Same controls and rules as [EditSessionDialog]:
+ * both ends get their own date AND time (M3 pickers, never free text), an overnight shift is one tap
+ * away, and the pair is validated by [ShiftTimeMath] with the reason shown inline before Save.
+ */
 @Composable
 fun AddManualShiftDialog(
     onDismiss: () -> Unit,
     onSave: (startMs: Long, endMs: Long, note: String, isPutInSystem: Boolean) -> Unit
 ) {
-    val now = System.currentTimeMillis()
-    val defaultStart = now - (8L * 3600000L)
-
-    var startMs by remember { mutableLongStateOf(defaultStart) }
-    var endMs by remember { mutableLongStateOf(now) }
+    // Default (unchanged): an 8 h shift that ends now.
+    var endMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var startMs by remember { mutableLongStateOf(endMs - 8L * 3_600_000L) }
     var noteText by remember { mutableStateOf("") }
     var isPutInSystem by remember { mutableStateOf(false) }
 
-    var showDatePicker by remember { mutableStateOf(false) }
+    var showStartDatePicker by remember { mutableStateOf(false) }
     var showStartTimePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
 
-    val sdfDate = SimpleDateFormat("EEE, MMM d, yyyy", Locale.US)
-    val sdfTime = SimpleDateFormat("h:mm a", Locale.US)
+    val sdfDate = remember { SimpleDateFormat("EEE, MMM d, yyyy", Locale.US) }
+    val sdfTime = remember { SimpleDateFormat("h:mm a", Locale.US) }
 
-    val validation = ShiftTimeMath.validate(startMs, endMs)
-    val errorText = ShiftTimeMath.errorMessage(validation)
+    val errorText = ShiftTimeMath.errorMessage(ShiftTimeMath.validate(startMs, endMs))
+    val durationMs = ShiftTimeMath.durationMs(startMs, endMs)
+    val crossesMidnight = ShiftTimeMath.isOvernight(startMs, endMs)
+    val endsOnSameDayAsStart = ShiftTimeMath.startOfDayMs(startMs) == ShiftTimeMath.startOfDayMs(endMs)
 
-    if (showDatePicker) {
+    if (showStartDatePicker) {
         MaterialDatePickerDialog(
             initialDateMs = ShiftTimeMath.toPickerDateMs(startMs),
-            onDismiss = { showDatePicker = false },
-            onConfirm = { dateMillis ->
-                val calOrig = Calendar.getInstance().apply { timeInMillis = startMs }
-                val calNew = Calendar.getInstance().apply {
-                    timeInMillis = dateMillis
-                    set(Calendar.HOUR_OF_DAY, calOrig.get(Calendar.HOUR_OF_DAY))
-                    set(Calendar.MINUTE, calOrig.get(Calendar.MINUTE))
-                }
-                val diff = endMs - startMs
-                startMs = calNew.timeInMillis
-                endMs = startMs + diff
-                showDatePicker = false
+            onDismiss = { showStartDatePicker = false },
+            onConfirm = { pickedUtcDate ->
+                // The picker reports UTC midnight: re-anchor through ShiftTimeMath so a US time zone
+                // never lands on the previous day. The stop moves with the start (keeps the length).
+                val keepDuration = endMs - startMs
+                startMs = ShiftTimeMath.applyPickedDate(startMs, pickedUtcDate)
+                if (keepDuration > 0L) endMs = startMs + keepDuration
+                showStartDatePicker = false
             }
         )
     }
@@ -214,15 +220,24 @@ fun AddManualShiftDialog(
     if (showStartTimePicker) {
         val c = Calendar.getInstance().apply { timeInMillis = startMs }
         MaterialTimePickerDialog(
-            title = "Select Shift Start Time",
+            title = "Shift Start Time",
             initialHour = c.get(Calendar.HOUR_OF_DAY),
             initialMinute = c.get(Calendar.MINUTE),
             onDismiss = { showStartTimePicker = false },
             onConfirm = { h, m ->
-                c.set(Calendar.HOUR_OF_DAY, h)
-                c.set(Calendar.MINUTE, m)
-                startMs = c.timeInMillis
+                startMs = ShiftTimeMath.applyPickedTime(startMs, h, m)
                 showStartTimePicker = false
+            }
+        )
+    }
+
+    if (showEndDatePicker) {
+        MaterialDatePickerDialog(
+            initialDateMs = ShiftTimeMath.toPickerDateMs(endMs),
+            onDismiss = { showEndDatePicker = false },
+            onConfirm = { pickedUtcDate ->
+                endMs = ShiftTimeMath.applyPickedDate(endMs, pickedUtcDate)
+                showEndDatePicker = false
             }
         )
     }
@@ -230,85 +245,66 @@ fun AddManualShiftDialog(
     if (showEndTimePicker) {
         val c = Calendar.getInstance().apply { timeInMillis = endMs }
         MaterialTimePickerDialog(
-            title = "Select Shift End Time",
+            title = "Shift End Time",
             initialHour = c.get(Calendar.HOUR_OF_DAY),
             initialMinute = c.get(Calendar.MINUTE),
             onDismiss = { showEndTimePicker = false },
             onConfirm = { h, m ->
-                c.set(Calendar.HOUR_OF_DAY, h)
-                c.set(Calendar.MINUTE, m)
-                endMs = c.timeInMillis
+                endMs = ShiftTimeMath.applyPickedTime(endMs, h, m)
                 showEndTimePicker = false
             }
         )
     }
 
-    AlertDialog(
+    ExpressiveAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add Past Shift", fontWeight = FontWeight.Bold) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Text("SHIFT DATE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(4.dp))
+                ShiftEndField(
+                    label = "START",
+                    dateText = sdfDate.format(Date(startMs)),
+                    timeText = sdfTime.format(Date(startMs)),
+                    onPickDate = { showStartDatePicker = true },
+                    onPickTime = { showStartTimePicker = true }
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                ShiftEndField(
+                    label = "STOP",
+                    dateText = sdfDate.format(Date(endMs)),
+                    timeText = sdfTime.format(Date(endMs)),
+                    onPickDate = { showEndDatePicker = true },
+                    onPickTime = { showEndTimePicker = true }
+                )
+
+                if (endsOnSameDayAsStart && errorText != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    ScaledTextButton(onClick = { endMs = ShiftTimeMath.nextDaySameTime(endMs) }) {
+                        Icon(Icons.Rounded.NightsStay, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("This shift ends the next morning", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true }
+                    shape = MaterialTheme.shapes.small,
+                    color = if (errorText == null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(sdfDate.format(Date(startMs)), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("START TIME", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            modifier = Modifier.fillMaxWidth().clickable { showStartTimePicker = true }
-                        ) {
-                            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Filled.AccessTime, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(sdfTime.format(Date(startMs)), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("END TIME", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            modifier = Modifier.fillMaxWidth().clickable { showEndTimePicker = true }
-                        ) {
-                            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Filled.AccessTime, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(sdfTime.format(Date(endMs)), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                if (errorText != null) {
                     Text(
-                        text = errorText,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.error
+                        text = errorText ?: ("Duration ${ShiftTimeMath.formatDurationShort(durationMs)}" +
+                            if (crossesMidnight) " • crosses midnight" else ""),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (errorText == null) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = noteText,
@@ -321,9 +317,9 @@ fun AddManualShiftDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.fillMaxWidth().clickable { isPutInSystem = !isPutInSystem }
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.fillMaxWidth().expressiveClickable { isPutInSystem = !isPutInSystem }
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -331,8 +327,8 @@ fun AddManualShiftDialog(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Entered into Payroll System", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            Text("Check if overtime already submitted", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Entered into Payroll System", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                            Text("Check if overtime already submitted", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Checkbox(checked = isPutInSystem, onCheckedChange = { isPutInSystem = it })
                     }
@@ -340,17 +336,15 @@ fun AddManualShiftDialog(
             }
         },
         confirmButton = {
-            Button(
+            ScaledButton(
                 enabled = errorText == null,
-                onClick = {
-                    onSave(startMs, endMs, noteText.trim(), isPutInSystem)
-                }
+                onClick = { onSave(startMs, endMs, noteText.trim(), isPutInSystem) }
             ) {
                 Text("Add Shift")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            DialogBackButton(onClick = onDismiss)
         }
     )
 }
@@ -370,6 +364,9 @@ fun PtoManagementDialog(
 
     val sdfDate = SimpleDateFormat("EEE, MMM d, yyyy", Locale.US)
 
+    val hoursCheck = InputValidation.ptoHours(hoursText)
+    var pendingDelete by remember { mutableStateOf<PtoEntry?>(null) }
+
     if (showDatePicker) {
         MaterialDatePickerDialog(
             initialDateMs = dateMs,
@@ -381,22 +378,51 @@ fun PtoManagementDialog(
         )
     }
 
-    AlertDialog(
+    pendingDelete?.let { entry ->
+        ExpressiveAlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            icon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Delete this entry?") },
+            text = {
+                Text(
+                    "${entry.type}: ${entry.hours}h on ${sdfDate.format(Date(entry.date))}" +
+                        (if (entry.note.isNotBlank()) " (${entry.note})" else "") +
+                        ". PTO deletions cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                ScaledButton(
+                    onClick = {
+                        onDeletePto(entry.id)
+                        pendingDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) { Text("Delete") }
+            },
+            dismissButton = { DialogBackButton("Keep", onClick = { pendingDelete = null }) }
+        )
+    }
+
+    ExpressiveAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Log PTO / Holiday Hours", fontWeight = FontWeight.Bold) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Text("DATE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("DATE", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(4.dp))
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.small,
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true }
+                    modifier = Modifier.fillMaxWidth().expressiveClickable { showDatePicker = true }
                 ) {
                     Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.CalendarMonth, contentDescription = null, tint = EmeraldSuccess, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Rounded.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(sdfDate.format(Date(dateMs)), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(sdfDate.format(Date(dateMs)), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     }
                 }
 
@@ -406,35 +432,23 @@ fun PtoManagementDialog(
                     value = hoursText,
                     onValueChange = { hoursText = it },
                     label = { Text("Hours") },
+                    isError = !hoursCheck.ok,
+                    supportingText = hoursCheck.error?.let { { Text(it) } },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    PtoType.values().forEach { type ->
-                        val isSelected = selectedType == type
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) PurplePrimary else MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { selectedType = type }
-                        ) {
-                            Text(
-                                text = type.name,
-                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                        }
-                    }
-                }
+                ConnectedToggleGroup(
+                    options = PtoType.values().toList(),
+                    selected = selectedType,
+                    onSelect = { selectedType = it },
+                    label = { it.name },
+                    size = ExpressiveButtonSize.ExtraSmall,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
@@ -445,10 +459,10 @@ fun PtoManagementDialog(
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Button(
+                ScaledButton(
+                    enabled = hoursCheck.ok,
                     onClick = {
-                        val hours = hoursText.toDoubleOrNull() ?: 0.0
-                        if (hours > 0.0) {
+                        hoursCheck.value?.let { hours ->
                             onAddPto(dateMs, hours, selectedType, noteText.trim())
                             noteText = ""
                         }
@@ -460,7 +474,7 @@ fun PtoManagementDialog(
 
                 if (ptoEntries.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(14.dp))
-                    Text("LOGGED PTO / HOLIDAYS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("LOGGED PTO / HOLIDAYS", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(6.dp))
                     ptoEntries.reversed().forEach { entry ->
                         Row(
@@ -471,11 +485,11 @@ fun PtoManagementDialog(
                                 .padding(vertical = 4.dp)
                         ) {
                             Column {
-                                Text("${entry.type}: ${entry.hours}h", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("${sdfDate.format(Date(entry.date))} ${if (entry.note.isNotBlank()) "• " + entry.note else ""}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("${entry.type}: ${entry.hours}h", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                Text("${sdfDate.format(Date(entry.date))} ${if (entry.note.isNotBlank()) "• " + entry.note else ""}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            IconButton(onClick = { onDeletePto(entry.id) }) {
-                                Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = RoseError)
+                            ScaledIconButton(onClick = { pendingDelete = entry }) {
+                                Icon(Icons.Rounded.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -483,7 +497,7 @@ fun PtoManagementDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            DialogBackButton("Close", onClick = onDismiss)
         }
     )
 }
@@ -540,8 +554,10 @@ fun SettingsDialog(
         }
     }
     var schedule by remember { mutableStateOf(currentSettings.paySchedule) }
-    var standardHours by remember { mutableDoubleStateOf(currentSettings.standardShiftHours) }
-    var cliffHours by remember { mutableDoubleStateOf(currentSettings.cliffHours) }
+    // Typed as text and validated (InputValidation): the old Double-backed fields could not even be
+    // cleared, and accepted an OT cliff inside the standard shift.
+    var standardText by remember { mutableStateOf(currentSettings.standardShiftHours.toString()) }
+    var cliffText by remember { mutableStateOf(currentSettings.cliffHours.toString()) }
     var otMultiplier by remember { mutableDoubleStateOf(currentSettings.otMultiplier) }
     var theme by remember { mutableStateOf(currentSettings.theme) }
     var soundEnabled by remember { mutableStateOf(currentSettings.soundEnabled) }
@@ -553,29 +569,37 @@ fun SettingsDialog(
 
     // Geofencing Settings
     var geofenceEnabled by remember { mutableStateOf(currentSettings.geofenceEnabled) }
-    var workLat by remember { mutableDoubleStateOf(currentSettings.workLatitude) }
-    var workLng by remember { mutableDoubleStateOf(currentSettings.workLongitude) }
+    fun coordText(v: Double) = if (v != 0.0) String.format(Locale.US, "%.6f", v) else ""
+    var latText by remember { mutableStateOf(coordText(currentSettings.workLatitude)) }
+    var lngText by remember { mutableStateOf(coordText(currentSettings.workLongitude)) }
     var radiusMeters by remember { mutableFloatStateOf(currentSettings.geofenceRadiusMeters) }
     var addressName by remember { mutableStateOf(currentSettings.workAddressName) }
     var useTaskerFallback by remember { mutableStateOf(currentSettings.useTaskerFallback) }
     var runTaskerTask by remember { mutableStateOf(currentSettings.runTaskerTaskOnClock) }
     var taskerTaskName by remember { mutableStateOf(currentSettings.taskerTaskName) }
 
-    AlertDialog(
+    val standardCheck = InputValidation.standardShiftHours(standardText)
+    val cliffCheck = InputValidation.cliffHours(cliffText, standardCheck.value)
+    val latCheck = InputValidation.latitude(latText)
+    val lngCheck = InputValidation.longitude(lngText)
+    // Coordinates only matter (and only block Save) while the geofence is on.
+    val settingsValid = standardCheck.ok && cliffCheck.ok && (!geofenceEnabled || (latCheck.ok && lngCheck.ok))
+
+    ExpressiveAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Tune, contentDescription = null, tint = PurplePrimary, modifier = Modifier.padding(end = 8.dp))
+                Icon(Icons.Rounded.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp))
                 Text("App Settings & Geofence", fontWeight = FontWeight.Bold)
             }
         },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 // GOOGLE MAPS GEOFENCE SECTION
-                Text("GOOGLE MAPS AUTO-CLOCK GEOFENCE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("GOOGLE MAPS AUTO-CLOCK GEOFENCE", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("Auto Clock In/Out with Geofence", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Auto Clock In/Out with Geofence", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                     Checkbox(checked = geofenceEnabled, onCheckedChange = { geofenceEnabled = it })
                 }
 
@@ -591,28 +615,36 @@ fun SettingsDialog(
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
-                            value = if (workLat != 0.0) String.format(Locale.US, "%.6f", workLat) else "",
-                            onValueChange = { workLat = it.toDoubleOrNull() ?: workLat },
+                            value = latText,
+                            onValueChange = { latText = it },
                             label = { Text("Latitude") },
+                            isError = !latCheck.ok,
+                            supportingText = latCheck.error?.let { { Text(it) } },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
-                            value = if (workLng != 0.0) String.format(Locale.US, "%.6f", workLng) else "",
-                            onValueChange = { workLng = it.toDoubleOrNull() ?: workLng },
+                            value = lngText,
+                            onValueChange = { lngText = it },
                             label = { Text("Longitude") },
+                            isError = !lngCheck.ok,
+                            supportingText = lngCheck.error?.let { { Text(it) } },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                            singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
                     }
 
                     Spacer(modifier = Modifier.height(6.dp))
-                    FilledTonalButton(
+                    ScaledFilledTonalButton(
                         onClick = {
                             try {
                                 val fused = LocationServices.getFusedLocationProviderClient(context)
                                 fused.lastLocation.addOnSuccessListener { loc: Location? ->
                                     if (loc != null) {
-                                        workLat = loc.latitude
-                                        workLng = loc.longitude
+                                        latText = coordText(loc.latitude)
+                                        lngText = coordText(loc.longitude)
                                         if (addressName.isBlank()) addressName = "Randall Engineering Work Site"
                                     }
                                 }
@@ -622,13 +654,13 @@ fun SettingsDialog(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Filled.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Rounded.MyLocation, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Set to Current GPS Location", fontSize = 12.sp)
+                        Text("Set to Current GPS Location", style = MaterialTheme.typography.bodySmall)
                     }
 
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("Geofence Radius: ${radiusMeters.toInt()} meters", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Geofence Radius: ${radiusMeters.toInt()} meters", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Slider(
                         value = radiusMeters,
                         onValueChange = { radiusMeters = it },
@@ -643,7 +675,7 @@ fun SettingsDialog(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Text("GEOFENCE OPTIONS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text("GEOFENCE OPTIONS", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.height(4.dp))
 
                     // Tasker fallback toggle
@@ -653,10 +685,10 @@ fun SettingsDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Use Tasker for Clock-In/Out", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Use Tasker for Clock-In/Out", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                             Text(
                                 "Bypass native geofence, use Tasker automation instead",
-                                fontSize = 10.sp,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -667,7 +699,7 @@ fun SettingsDialog(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             "Set up the Tasker tasks with \"Tasker Setup Instructions\" in the TASKER section below.",
-                            fontSize = 10.sp,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -677,7 +709,7 @@ fun SettingsDialog(
                     // Background location permission button
                     val bgLocationGranted = com.randallengineering.jokarztimeclock.engine.PermissionHelper.hasLocationPermissions(context)
                     if (!bgLocationGranted) {
-                        FilledTonalButton(
+                        ScaledFilledTonalButton(
                             onClick = {
                                 // Open app settings so user can grant "Allow all the time"
                                 val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -692,21 +724,21 @@ fun SettingsDialog(
                                 contentColor = MaterialTheme.colorScheme.onErrorContainer
                             )
                         ) {
-                            Icon(Icons.Filled.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Rounded.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Grant Background Location Permission", fontSize = 12.sp)
+                            Text("Grant Background Location Permission", style = MaterialTheme.typography.bodySmall)
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             "⚠ Background location required. Tap above → Location → select \"Allow all the time\".",
-                            fontSize = 10.sp,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
                     } else {
                         Text(
                             "✓ Background location permission granted",
-                            fontSize = 11.sp,
-                            color = EmeraldSuccess,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.tertiary,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -717,32 +749,32 @@ fun SettingsDialog(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // TASKER SECTION
-                Text("TASKER", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("TASKER", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(4.dp))
-                FilledTonalButton(
+                ScaledFilledTonalButton(
                     onClick = { com.randallengineering.jokarztimeclock.engine.TaskerHelper.launchTaskerSetup(context) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Tasker Setup Instructions", fontSize = 12.sp)
+                    Text("Tasker Setup Instructions", style = MaterialTheme.typography.bodySmall)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                FilledTonalButton(
+                ScaledFilledTonalButton(
                     onClick = { com.randallengineering.jokarztimeclock.engine.TaskerHelper.exportProfileFile(context) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     // Writes a real .prf.xml to Downloads, then shows the import steps. The old
                     // button "imported" the profile with an undocumented tasker://... URI and no file.
-                    Text("Export Tasker profile (.prf.xml)", fontSize = 12.sp)
+                    Text("Export Tasker profile (.prf.xml)", style = MaterialTheme.typography.bodySmall)
                 }
                 Text(
                     "Tasker never imports this task's file for you — the button writes " +
                         "Downloads/${com.randallengineering.jokarztimeclock.engine.TaskerProfileExport.FILE_NAME} " +
                         "and then you import it in Tasker.",
-                    fontSize = 10.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -752,10 +784,10 @@ fun SettingsDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Run Tasker task on clock in/out", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Run Tasker task on clock in/out", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                         Text(
                             "Optional. Needs Tasker ▸ Preferences ▸ Misc ▸ Allow External Access",
-                            fontSize = 10.sp,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -795,73 +827,74 @@ fun SettingsDialog(
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Text("PAY SCHEDULE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("PAY SCHEDULE", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(4.dp))
                 PaySchedule.values().forEach { s ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { schedule = s }
+                            .expressiveClickable { schedule = s }
                             .padding(vertical = 4.dp)
                     ) {
                         androidx.compose.material3.RadioButton(selected = schedule == s, onClick = { schedule = s })
-                        Text(s.label, fontSize = 12.sp, modifier = Modifier.padding(start = 6.dp))
+                        Text(s.label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 6.dp))
                     }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
-                        value = standardHours.toString(),
-                        onValueChange = { standardHours = it.toDoubleOrNull() ?: standardHours },
+                        value = standardText,
+                        onValueChange = { standardText = it },
                         label = { Text("Standard Shift") },
+                        suffix = { Text("h") },
+                        isError = !standardCheck.ok,
+                        supportingText = standardCheck.error?.let { { Text(it) } },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
-                        value = cliffHours.toString(),
-                        onValueChange = { cliffHours = it.toDoubleOrNull() ?: cliffHours },
+                        value = cliffText,
+                        onValueChange = { cliffText = it },
                         label = { Text("OT Cliff Target") },
+                        suffix = { Text("h") },
+                        isError = !cliffCheck.ok,
+                        supportingText = cliffCheck.error?.let { { Text(it) } },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
-                Text("OVERTIME MULTIPLIER", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 4.dp)) {
-                    listOf(1.0 to "1.0x", 1.5 to "1.5x", 2.0 to "2.0x").forEach { (mult, label) ->
-                        val isSelected = otMultiplier == mult
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isSelected) PurplePrimary else MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { otMultiplier = mult }
-                        ) {
-                            Text(
-                                text = label,
-                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 8.dp),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                        }
-                    }
-                }
+                Text("OVERTIME MULTIPLIER", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val multipliers = listOf(1.0, 1.5, 2.0)
+                ConnectedToggleGroup(
+                    // A multiplier saved by an older build that is not one of the three still shows
+                    // (nothing selected) and is kept unless the owner picks another.
+                    options = multipliers,
+                    selected = otMultiplier,
+                    onSelect = { otMultiplier = it },
+                    label = { "${it}x" },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
 
                 Spacer(modifier = Modifier.height(10.dp))
-                Text("THEME & VISUALS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("THEME & VISUALS", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 ThemeMode.values().forEach { t ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { theme = t }
+                            .expressiveClickable { theme = t }
                             .padding(vertical = 2.dp)
                     ) {
                         androidx.compose.material3.RadioButton(selected = theme == t, onClick = { theme = t })
-                        Text(t.label, fontSize = 12.sp, modifier = Modifier.padding(start = 6.dp))
+                        Text(t.label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 6.dp))
                     }
                 }
 
@@ -870,66 +903,59 @@ fun SettingsDialog(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("Privacy Mode (Hide Dollar Amounts)", fontSize = 12.sp)
+                    Text("Privacy Mode (Hide Dollar Amounts)", style = MaterialTheme.typography.bodySmall)
                     Checkbox(checked = hideMoneyAmounts, onCheckedChange = { hideMoneyAmounts = it })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("Live Ongoing Notification (Android Bar)", fontSize = 12.sp)
+                    Text("Live Ongoing Notification (Android Bar)", style = MaterialTheme.typography.bodySmall)
                     Checkbox(checked = liveNotificationEnabled, onCheckedChange = { liveNotificationEnabled = it })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("Sound Chimes & Clicks", fontSize = 12.sp)
+                    Text("Sound Chimes & Clicks", style = MaterialTheme.typography.bodySmall)
                     Checkbox(checked = soundEnabled, onCheckedChange = { soundEnabled = it })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("Haptic Vibration Feedback", fontSize = 12.sp)
+                    Text("Haptic Vibration Feedback", style = MaterialTheme.typography.bodySmall)
                     Checkbox(checked = hapticEnabled, onCheckedChange = { hapticEnabled = it })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("Shift Milestone Notifications", fontSize = 12.sp)
+                    Text("Shift Milestone Notifications", style = MaterialTheme.typography.bodySmall)
                     Checkbox(checked = notificationsEnabled, onCheckedChange = { notificationsEnabled = it })
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("LIVE CHIP & COLOROS BACKGROUND", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("LIVE CHIP & COLOROS BACKGROUND", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     "The status bar timer is drawn by Android. If it ever stops moving, these are the " +
                         "phone settings that control it — ColorOS can freeze a background app unless it " +
                         "is exempt from battery optimisation and allowed to run at startup.",
-                    fontSize = 10.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                    FilledTonalButton(
-                        onClick = { (context as? android.app.Activity)?.let { PermissionHelper.openNotificationSettings(it) } },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Notifications", fontSize = 11.sp)
-                    }
-                    FilledTonalButton(
-                        onClick = {
+                ConnectedButtonGroup(
+                    actions = listOf(
+                        ConnectedAction("Notifications", onClick = {
+                            (context as? android.app.Activity)?.let { PermissionHelper.openNotificationSettings(it) }
+                        }),
+                        ConnectedAction("Battery", onClick = {
                             val act = context as? android.app.Activity
                             if (act != null) {
                                 if (!PermissionHelper.requestIgnoreBatteryOptimizations(act)) {
                                     PermissionHelper.openAutostartSettings(act)
                                 }
                             }
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Battery", fontSize = 11.sp)
-                    }
-                    FilledTonalButton(
-                        onClick = { (context as? android.app.Activity)?.let { PermissionHelper.openAutostartSettings(it) } },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Autostart", fontSize = 11.sp)
-                    }
-                }
+                        }),
+                        ConnectedAction("Autostart", onClick = {
+                            (context as? android.app.Activity)?.let { PermissionHelper.openAutostartSettings(it) }
+                        })
+                    ),
+                    size = ExpressiveButtonSize.ExtraSmall,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("Auto-Deduct 30m Meal After 4h", fontSize = 12.sp)
+                    Text("Auto-Deduct 30m Meal After 4h", style = MaterialTheme.typography.bodySmall)
                     Checkbox(checked = autoBreak, onCheckedChange = { autoBreak = it })
                 }
 
@@ -937,52 +963,43 @@ fun SettingsDialog(
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Text("BACKUP & RESTORE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("BACKUP & RESTORE", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     "Export every shift, PTO entry and setting to a file, or restore from one. " +
                         "You will see exactly what an import changes before anything is applied.",
-                    fontSize = 10.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                    FilledTonalButton(
-                        onClick = {
+                ConnectedButtonGroup(
+                    actions = listOf(
+                        ConnectedAction("Export", icon = Icons.Rounded.FileUpload, onClick = {
                             val day = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
                             exportLauncher.launch("jokarz-timeclock-backup-$day.json")
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Filled.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Export backup", fontSize = 11.sp)
-                    }
-                    FilledTonalButton(
+                        }),
                         // Some file managers label .json as octet-stream, so */* keeps those files pickable.
-                        onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Filled.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Import backup", fontSize = 11.sp)
-                    }
-                }
+                        ConnectedAction("Import", icon = Icons.Rounded.FileDownload, onClick = {
+                            importLauncher.launch(arrayOf("application/json", "*/*"))
+                        })
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 Spacer(modifier = Modifier.height(10.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Text("IMPORT AN OLD PAYROLL CSV", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("IMPORT AN OLD PAYROLL CSV", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     "Bring in shifts from an old CSV export, e.g. a 'Transfer Dock' timesheet. " +
                         "Durations are recalculated from the start and end times.",
-                    fontSize = 10.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(6.dp))
-                FilledTonalButton(
+                ScaledFilledTonalButton(
                     // Providers label a .csv/.txt inconsistently: text/csv, text/comma-separated-values,
                     // text/plain, or application/octet-stream for a file with no known extension. The
                     // named types sort real text first in pickers that honour them; */* keeps a file
@@ -990,27 +1007,28 @@ fun SettingsDialog(
                     onClick = { csvLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "text/plain", "*/*")) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Filled.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Rounded.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Choose CSV file", fontSize = 11.sp)
+                    Text("Choose CSV file", style = MaterialTheme.typography.bodySmall)
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     com.randallengineering.jokarztimeclock.AppVersion.label,
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
         confirmButton = {
-            Button(
+            ScaledButton(
+                enabled = settingsValid,
                 onClick = {
                     onSave(
                         currentSettings.copy(
                             paySchedule = schedule,
-                            standardShiftHours = standardHours,
-                            cliffHours = cliffHours,
+                            standardShiftHours = standardCheck.value ?: currentSettings.standardShiftHours,
+                            cliffHours = cliffCheck.value ?: currentSettings.cliffHours,
                             otMultiplier = otMultiplier,
                             theme = theme,
                             soundEnabled = soundEnabled,
@@ -1023,8 +1041,9 @@ fun SettingsDialog(
                             useTaskerFallback = useTaskerFallback,
                             runTaskerTaskOnClock = runTaskerTask,
                             taskerTaskName = taskerTaskName.trim(),
-                            workLatitude = workLat,
-                            workLongitude = workLng,
+                            // An invalid coordinate (possible only with the geofence off) keeps the saved one.
+                            workLatitude = latCheck.value ?: currentSettings.workLatitude,
+                            workLongitude = lngCheck.value ?: currentSettings.workLongitude,
                             geofenceRadiusMeters = radiusMeters,
                             workAddressName = addressName
                         )
@@ -1035,16 +1054,16 @@ fun SettingsDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            DialogBackButton(onClick = onDismiss)
         }
     )
 
     importError?.let { reason ->
-        AlertDialog(
+        ExpressiveAlertDialog(
             onDismissRequest = { importError = null },
             title = { Text("Import refused", fontWeight = FontWeight.Bold) },
-            text = { Text(reason + "\n\nNothing was changed.", fontSize = 13.sp) },
-            confirmButton = { TextButton(onClick = { importError = null }) { Text("OK") } }
+            text = { Text(reason + "\n\nNothing was changed.", style = MaterialTheme.typography.bodyMedium) },
+            confirmButton = { DialogBackButton("OK", onClick = { importError = null }) }
         )
     }
 
@@ -1123,41 +1142,40 @@ private fun ImportBackupConfirmDialog(
         "Made by Jokarz Timeclock v${backup.appVersionName ?: "?"} on $exported (backup format v${backup.sourceVersion})."
     }
 
-    AlertDialog(
+    ExpressiveAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Import backup?", fontWeight = FontWeight.Bold) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Text(source, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(source, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 backup.warnings.forEach { warning ->
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("⚠ $warning", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
+                    Text("⚠ $warning", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
                 Spacer(modifier = Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                    ImportModeButton("Replace everything", mode == ImportMode.REPLACE, Modifier.weight(1f)) {
-                        mode = ImportMode.REPLACE
-                    }
-                    ImportModeButton("Merge by id", mode == ImportMode.MERGE, Modifier.weight(1f)) {
-                        mode = ImportMode.MERGE
-                    }
-                }
+                ConnectedToggleGroup(
+                    options = listOf(ImportMode.REPLACE, ImportMode.MERGE),
+                    selected = mode,
+                    onSelect = { mode = it },
+                    label = { if (it == ImportMode.REPLACE) "Replace all" else "Merge by id" },
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     "Selected: " + (if (mode == ImportMode.REPLACE) "Replace everything" else "Merge by id"),
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                Text(plan.summary, fontSize = 12.sp)
+                Text(plan.summary, style = MaterialTheme.typography.bodySmall)
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(mode) }) {
+            ScaledButton(onClick = { onConfirm(mode) }) {
                 Text(if (mode == ImportMode.REPLACE) "Replace" else "Merge")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            DialogBackButton(onClick = onDismiss)
         }
     )
 }
@@ -1194,49 +1212,48 @@ private fun CsvImportPreviewDialog(
     val preview = remember(mode) { onPlanCsvImport(parsed, mode) }
     val modeLabel = if (mode == ImportMode.REPLACE) "Replace my shifts" else "Merge by id"
 
-    AlertDialog(
+    ExpressiveAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Import CSV?", fontWeight = FontWeight.Bold) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Text(fileName, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(fileName, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                 Text(
                     "${preview.entriesParsed} ${if (preview.entriesParsed == 1) "entry" else "entries"} will be imported" +
                         if (preview.entriesNeedingAttention > 0) ", ${preview.entriesNeedingAttention} need a look." else ".",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                    ImportModeButton("Replace my shifts", mode == ImportMode.REPLACE, Modifier.weight(1f)) {
-                        mode = ImportMode.REPLACE
-                    }
-                    ImportModeButton("Merge by id", mode == ImportMode.MERGE, Modifier.weight(1f)) {
-                        mode = ImportMode.MERGE
-                    }
-                }
+                ConnectedToggleGroup(
+                    options = listOf(ImportMode.REPLACE, ImportMode.MERGE),
+                    selected = mode,
+                    onSelect = { mode = it },
+                    label = { if (it == ImportMode.REPLACE) "Replace shifts" else "Merge by id" },
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(modifier = Modifier.height(6.dp))
-                Text("Selected: $modeLabel", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                Text(preview.modeStatement, fontSize = 12.sp)
-                Text(preview.keepsStatement, fontSize = 12.sp)
+                Text("Selected: $modeLabel", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                Text(preview.modeStatement, style = MaterialTheme.typography.bodySmall)
+                Text(preview.keepsStatement, style = MaterialTheme.typography.bodySmall)
 
                 if (preview.anomalies.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(10.dp))
-                    Text("FLAGGED — READ BEFORE IMPORTING", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                    Text("FLAGGED — READ BEFORE IMPORTING", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                     preview.anomalies.forEach { anomaly ->
                         Spacer(modifier = Modifier.height(4.dp))
                         if (anomaly.kind.informational) {
-                            Text("ℹ ${anomaly.message}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("ℹ ${anomaly.message}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
+                                shape = MaterialTheme.shapes.extraSmall,
                                 color = MaterialTheme.colorScheme.errorContainer,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
                                     "⚠ ${anomaly.message}",
-                                    fontSize = 11.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onErrorContainer,
                                     modifier = Modifier.padding(8.dp)
@@ -1247,17 +1264,17 @@ private fun CsvImportPreviewDialog(
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
-                Text("EVERY ENTRY IN THE FILE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("EVERY ENTRY IN THE FILE", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 preview.rows.forEach { row -> CsvPreviewRow(row) }
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(mode) }) {
+            ScaledButton(onClick = { onConfirm(mode) }) {
                 Text(if (mode == ImportMode.REPLACE) "Replace" else "Merge")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            DialogBackButton(onClick = onDismiss)
         }
     )
 }
@@ -1266,28 +1283,28 @@ private fun CsvImportPreviewDialog(
 private fun CsvPreviewRow(row: CsvImportPreview.PreviewRow) {
     val needsAttention = row.anomalyKinds.any { !it.informational }
     Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = if (needsAttention) MaterialTheme.colorScheme.errorContainer else Color.Transparent,
+        shape = MaterialTheme.shapes.extraSmall,
+        color = if (needsAttention) MaterialTheme.colorScheme.errorContainer else Transparent,
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
     ) {
         Column(modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)) {
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Text(row.localDate, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text(row.durationText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(row.localDate, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Text(row.durationText, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
             }
             val end = if (row.localEndDate != row.localDate) "${row.localEndDate} ${row.localEnd}" else row.localEnd
             Text(
                 "${row.localStart} – $end · break ${row.breakText} · line ${row.line}",
-                fontSize = 10.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (row.note.isNotBlank()) {
-                Text(row.note, fontSize = 10.sp)
+                Text(row.note, style = MaterialTheme.typography.bodySmall)
             }
             if (row.anomalyKinds.isNotEmpty()) {
                 Text(
                     (if (needsAttention) "⚠ " else "ℹ ") + row.anomalyKinds.joinToString { anomalyLabel(it) },
-                    fontSize = 10.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = if (needsAttention) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1305,24 +1322,15 @@ private fun anomalyLabel(kind: AnomalyKind): String = when (kind) {
 }
 
 @Composable
-private fun ImportModeButton(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    if (selected) {
-        Button(onClick = onClick, modifier = modifier) { Text(label, fontSize = 11.sp) }
-    } else {
-        OutlinedButton(onClick = onClick, modifier = modifier) { Text(label, fontSize = 11.sp) }
-    }
-}
-
-@Composable
 fun AnalyticsDialog(
     state: TimeclockState,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    ExpressiveAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.BarChart, contentDescription = null, tint = PurplePrimary, modifier = Modifier.padding(end = 8.dp))
+                Icon(Icons.Rounded.BarChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp))
                 Text("Weekly Analytics", fontWeight = FontWeight.Bold)
             }
         },
@@ -1332,7 +1340,7 @@ fun AnalyticsDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) { Text("Done") }
+            DialogBackButton("Done", filled = true, onClick = onDismiss)
         }
     )
 }
@@ -1347,7 +1355,7 @@ fun TimesheetReportDialog(
     val sdfDate = SimpleDateFormat("yyyy-MM-dd", Locale.US)
     val sdfTime = SimpleDateFormat("h:mm a", Locale.US)
 
-    AlertDialog(
+    ExpressiveAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(
@@ -1356,39 +1364,39 @@ fun TimesheetReportDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Description, contentDescription = null, tint = EmeraldSuccess, modifier = Modifier.padding(end = 8.dp))
-                    Text("Timesheet Summary", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Icon(Icons.Rounded.Description, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.padding(end = 8.dp))
+                    Text("Timesheet Summary", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 }
-                IconButton(onClick = {
+                ScaledIconButton(onClick = {
                     shareCsvTimesheet(context, state)
                 }) {
-                    Icon(Icons.Filled.Share, contentDescription = "Share CSV")
+                    Icon(Icons.Rounded.Share, contentDescription = "Share CSV")
                 }
             }
         },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Card(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                            Text("Total Period Payable:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("${String.format("%.1f", totals.totalPayableHoursPeriod)} hrs", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = EmeraldSuccess)
+                            Text("Total Period Payable:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${String.format("%.1f", totals.totalPayableHoursPeriod)} hrs", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.tertiary)
                         }
                         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
-                            Text("Total Overtime:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("${String.format("%.1f", totals.totalOtHoursPeriod)} hrs", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = RoseError)
+                            Text("Total Overtime:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${String.format("%.1f", totals.totalOtHoursPeriod)} hrs", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.error)
                         }
                         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
-                            Text("Estimated Total (${state.displayMode.name}):", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(PayrollEngine.formatMoney(totals.periodEarnings), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = EmeraldSuccess)
+                            Text("Estimated Total (${state.displayMode.name}):", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(PayrollEngine.formatMoney(totals.periodEarnings), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.tertiary)
                         }
                     }
                 }
 
-                Text("SHIFTS LOG", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("SHIFTS LOG", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(4.dp))
                 state.sessions.reversed().forEach { s ->
                     Row(
@@ -1396,16 +1404,16 @@ fun TimesheetReportDialog(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                     ) {
                         Column {
-                            Text(sdfDate.format(Date(s.start)), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text("${sdfTime.format(Date(s.start))} - ${sdfTime.format(Date(s.end))}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(sdfDate.format(Date(s.start)), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Text("${sdfTime.format(Date(s.start))} - ${sdfTime.format(Date(s.end))}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Text(PayrollEngine.formatDurationShort(s.end - s.start), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(PayrollEngine.formatDurationShort(s.end - s.start), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) { Text("Close") }
+            DialogBackButton("Close", filled = true, onClick = onDismiss)
         }
     )
 }

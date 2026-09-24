@@ -1,6 +1,5 @@
 package com.randallengineering.jokarztimeclock.ui.dialogs
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,12 +12,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.NightsStay
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.rounded.AccessTime
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,25 +24,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.randallengineering.jokarztimeclock.data.models.Session
 import com.randallengineering.jokarztimeclock.engine.ShiftTimeMath
-import com.randallengineering.jokarztimeclock.ui.theme.EmeraldSuccess
-import com.randallengineering.jokarztimeclock.ui.theme.RoseError
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
+import com.randallengineering.jokarztimeclock.ui.components.ScaledButton
+import com.randallengineering.jokarztimeclock.ui.components.ScaledTextButton
+import com.randallengineering.jokarztimeclock.ui.components.expressiveClickable
+import com.randallengineering.jokarztimeclock.ui.components.ExpressiveAlertDialog
+import com.randallengineering.jokarztimeclock.ui.components.DialogBackButton
 import java.util.Locale
 
 /**
@@ -141,14 +139,14 @@ fun EditSessionDialog(
         )
     }
 
-    AlertDialog(
+    ExpressiveAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit Shift", fontWeight = FontWeight.Bold) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(
                     "Tap the date or the time of either end. Overnight shifts are fine — the stop date just moves forward.",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
@@ -174,10 +172,10 @@ fun EditSessionDialog(
 
                 if (endsOnSameDayAsStart) {
                     Spacer(modifier = Modifier.height(4.dp))
-                    TextButton(onClick = { endMs = ShiftTimeMath.nextDaySameTime(endMs) }) {
-                        Icon(Icons.Filled.NightsStay, contentDescription = null, modifier = Modifier.size(16.dp))
+                    ScaledTextButton(onClick = { endMs = ShiftTimeMath.nextDaySameTime(endMs) }) {
+                        Icon(Icons.Rounded.NightsStay, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("This shift ends the next morning", fontSize = 12.sp)
+                        Text("This shift ends the next morning", style = MaterialTheme.typography.bodySmall)
                     }
                 }
 
@@ -197,14 +195,14 @@ fun EditSessionDialog(
                             Text(
                                 text = "Duration ${ShiftTimeMath.formatDurationShort(durationMs)}" +
                                     if (crossesMidnight) " • crosses midnight" else "",
-                                fontSize = 13.sp,
+                                style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         } else {
                             Text(
                                 text = errorText,
-                                fontSize = 13.sp,
+                                style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.error
                             )
@@ -227,7 +225,7 @@ fun EditSessionDialog(
                 Surface(
                     shape = MaterialTheme.shapes.large,
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.fillMaxWidth().clickable { isPutInSystem = !isPutInSystem }
+                    modifier = Modifier.fillMaxWidth().expressiveClickable { isPutInSystem = !isPutInSystem }
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -235,8 +233,8 @@ fun EditSessionDialog(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Entered into Payroll System", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            Text("Check when overtime has been submitted", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Entered into Payroll System", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                            Text("Check when overtime has been submitted", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Checkbox(checked = isPutInSystem, onCheckedChange = { isPutInSystem = it })
                     }
@@ -244,7 +242,7 @@ fun EditSessionDialog(
             }
         },
         confirmButton = {
-            Button(
+            ScaledButton(
                 enabled = errorText == null,
                 onClick = { onSave(startMs, endMs, noteText.trim(), isPutInSystem) }
             ) {
@@ -253,15 +251,15 @@ fun EditSessionDialog(
         },
         dismissButton = {
             Row {
-                TextButton(
+                ScaledTextButton(
                     onClick = onDelete,
-                    colors = ButtonDefaults.textButtonColors(contentColor = RoseError)
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+                    Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
                     Text("Delete")
                 }
                 Spacer(modifier = Modifier.width(4.dp))
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                DialogBackButton(onClick = onDismiss)
             }
         }
     )
@@ -313,14 +311,14 @@ fun EditActiveTimerDialog(
         )
     }
 
-    AlertDialog(
+    ExpressiveAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit Running Shift Start", fontWeight = FontWeight.Bold) },
         text = {
             Column {
                 Text(
                     "Clock-in time for the shift that is running right now. The timer recomputes from this instant.",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(14.dp))
@@ -337,14 +335,14 @@ fun EditActiveTimerDialog(
 
                 Text(
                     text = errorText ?: "Elapsed ${ShiftTimeMath.formatDurationShort(now - startMs)}",
-                    fontSize = 13.sp,
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = if (errorText != null) MaterialTheme.colorScheme.error else EmeraldSuccess
+                    color = if (errorText != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
                 )
             }
         },
         confirmButton = {
-            Button(
+            ScaledButton(
                 enabled = errorText == null,
                 onClick = { onSave(startMs) }
             ) {
@@ -352,14 +350,14 @@ fun EditActiveTimerDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            DialogBackButton(onClick = onDismiss)
         }
     )
 }
 
 /** A labelled row with an independently tappable date chip and time chip. */
 @Composable
-private fun ShiftEndField(
+internal fun ShiftEndField(
     label: String,
     dateText: String,
     timeText: String,
@@ -369,7 +367,7 @@ private fun ShiftEndField(
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = label,
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -378,39 +376,39 @@ private fun ShiftEndField(
             Surface(
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                modifier = Modifier.weight(1.4f).clickable(onClick = onPickDate)
+                modifier = Modifier.weight(1.4f).expressiveClickable(onClick = onPickDate)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        Icons.Filled.CalendarMonth,
+                        Icons.Rounded.CalendarMonth,
                         contentDescription = "Change $label date",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(dateText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(dateText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
                 }
             }
             Surface(
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                modifier = Modifier.weight(1f).clickable(onClick = onPickTime)
+                modifier = Modifier.weight(1f).expressiveClickable(onClick = onPickTime)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        Icons.Filled.AccessTime,
+                        Icons.Rounded.AccessTime,
                         contentDescription = "Change $label time",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(timeText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(timeText, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                 }
             }
         }

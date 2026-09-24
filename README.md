@@ -432,12 +432,18 @@ the main screen header, the bottom of Settings, and the notification's sub-text.
 * **Date + time editing** with validation and overnight support — see above.
 * **Backup & Restore** — a versioned, checksummed export that imports back with a validated,
   atomic, replace-or-merge choice — see [Backup & Restore](#-backup--restore-export-that-you-can-actually-import).
-* **Canonical Material 3 Expressive UI** — the official `CircularWavyProgressIndicator` (its own
-  animated wave is the expressive "wiggle"), official `MaterialShapes` buttons (cookie clock-in,
-  square clock-out, pill lunch/pause) and `MaterialExpressiveTheme` with
-  `MotionScheme.expressive()`. The live timer is deliberately left as plain, unanimated,
-  high-contrast text — a fun shape must never make the timer harder to read, and no motion ever
-  delays reading the current state.
+* **Material 3 Expressive UI, calm motion** — `MaterialExpressiveTheme` on the canonical M3 purple
+  light scheme (every colour a scheme role; `ColorRoleEnforcementTest` fails the build on a raw
+  colour outside `ui/theme/Color.kt`), Roboto on the M3 type scale, 20 dp cards, 28 dp dialogs, pill
+  buttons on the M3 size scale (XS 32 … XL 136 dp) and connected button groups (3 dp gaps, 8 dp inner
+  corners). Motion is `MotionScheme.standard()` plus eased tweens: nothing bounces or overshoots
+  (`ThemeMotionTest` samples every spec), every tappable part ripples and squashes slightly, and
+  back — Cancel, the back button or the predictive back gesture — plays a dialog's entry in reverse.
+  The official `CircularWavyProgressIndicator` and the `Cookie9Sided` clock-in stay. The live timer
+  is deliberately left as plain, unanimated, high-contrast monospace text.
+* **Search and filter the shift history** — by note / job code, and by This week, Pay period,
+  last 30 days or any custom date range, with the count and hours of what is shown. A shift belongs
+  to the day it started, so an overnight shift is never listed twice.
 * **Old payroll CSV import** — bring a legacy `Transfer Dock`-style export in (Settings ▸ *Import an
   old payroll CSV*), with a full pre-import preview, plain-language flags for implausible rows, a
   replace-or-merge choice stated before it applies, and an all-or-nothing atomic write.

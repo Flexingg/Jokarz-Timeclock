@@ -16,16 +16,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.randallengineering.jokarztimeclock.data.models.TimeclockState
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
-import com.randallengineering.jokarztimeclock.ui.theme.AmberWarning
-import com.randallengineering.jokarztimeclock.ui.theme.PurpleAccent
-import com.randallengineering.jokarztimeclock.ui.theme.RoseError
-import com.randallengineering.jokarztimeclock.ui.theme.ExpressiveShapes
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -88,7 +83,7 @@ fun GoogleWeeklySwiper(
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = "WEEKLY BANK & INPUT",
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             letterSpacing = 1.sp,
@@ -101,7 +96,7 @@ fun GoogleWeeklySwiper(
         ) {
             items(weekDataList) { data ->
                 Surface(
-                    shape = ExpressiveShapes.Container,
+                    shape = MaterialTheme.shapes.medium,
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                     tonalElevation = 2.dp,
                     modifier = Modifier.width(260.dp)
@@ -114,14 +109,13 @@ fun GoogleWeeklySwiper(
                         ) {
                             Text(
                                 text = data.label,
-                                fontSize = 13.sp,
+                                style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "${PayrollEngine.formatDurationShort(data.weekClockedMs)} Tech",
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace,
+                                style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -136,31 +130,31 @@ fun GoogleWeeklySwiper(
                             Column {
                                 Text(
                                     text = "SYSTEM INPUT",
-                                    fontSize = 9.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = "${String.format("%.1f", data.weekSystemInput)}h OT",
-                                    fontSize = 17.sp,
+                                    style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (data.weekSystemInput > 0) PurpleAccent else MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = if (data.weekSystemInput > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
 
                             if (abs(data.weekBanked) > 0.05) {
-                                val bankColor = if (data.weekBanked >= 0) AmberWarning else RoseError
+                                val bankColor = if (data.weekBanked >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error
                                 val bankSign = if (data.weekBanked >= 0) "+" else ""
                                 Column(horizontalAlignment = Alignment.End) {
                                     Text(
                                         text = "NET BANKED",
-                                        fontSize = 9.sp,
+                                        style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(
                                         text = "$bankSign${String.format("%.1f", data.weekBanked)}h",
-                                        fontSize = 17.sp,
+                                        style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = bankColor
                                     )

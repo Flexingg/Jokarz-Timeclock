@@ -16,18 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.randallengineering.jokarztimeclock.data.models.TimeclockState
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
-import com.randallengineering.jokarztimeclock.ui.theme.PurpleAccent
-import com.randallengineering.jokarztimeclock.ui.theme.PurplePrimary
-import com.randallengineering.jokarztimeclock.ui.theme.RoseError
 import kotlin.math.max
 
 @Composable
@@ -38,6 +31,15 @@ fun WeeklyChart(
     val startOfWeek = PayrollEngine.getStartOfWeekDate()
     val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
     val textMeasurer = rememberTextMeasurer()
+
+    // Read the roles here: the Canvas draw lambda is not composable.
+    val scheme = MaterialTheme.colorScheme
+    val baseBarColor = scheme.primary
+    val emptyBarColor = scheme.surfaceContainerHighest
+    val overtimeColor = scheme.error
+    val baselineColor = scheme.outlineVariant
+    val valueStyle = MaterialTheme.typography.labelSmall.copy(color = scheme.onSurface)
+    val dayStyle = MaterialTheme.typography.labelSmall.copy(color = scheme.onSurfaceVariant)
 
     val dayData = (0 until 7).map { i ->
         val dayMs = startOfWeek + (i * 86400000L)
@@ -74,7 +76,7 @@ fun WeeklyChart(
 
             // Baseline
             drawLine(
-                color = Color(0xFF475569),
+                color = baselineColor,
                 start = Offset(0f, chartBottom),
                 end = Offset(canvasWidth, chartBottom),
                 strokeWidth = 1.5.dp.toPx()
@@ -89,7 +91,7 @@ fun WeeklyChart(
                 val baseH = max(0f, totalH - otH)
 
                 // Base Bar
-                val barColor = if (stats.clockedHours > 0) PurplePrimary else Color(0xFF334155)
+                val barColor = if (stats.clockedHours > 0) baseBarColor else emptyBarColor
                 drawRoundRect(
                     color = barColor,
                     topLeft = Offset(x, y + otH),
@@ -97,10 +99,10 @@ fun WeeklyChart(
                     cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
                 )
 
-                // Overtime Top Bar (Pink / Rose)
+                // Overtime Top Bar (error role)
                 if (stats.otHours > 0) {
                     drawRoundRect(
-                        color = RoseError,
+                        color = overtimeColor,
                         topLeft = Offset(x, y),
                         size = Size(barWidth, otH),
                         cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
@@ -112,7 +114,7 @@ fun WeeklyChart(
                     val valueStr = String.format("%.1f", stats.clockedHours)
                     val textLayout = textMeasurer.measure(
                         text = valueStr,
-                        style = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE2E8F0))
+                        style = valueStyle
                     )
                     drawText(
                         textLayoutResult = textLayout,
@@ -123,7 +125,7 @@ fun WeeklyChart(
                 // Day Label below
                 val labelLayout = textMeasurer.measure(
                     text = dayName,
-                    style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF94A3B8))
+                    style = dayStyle
                 )
                 drawText(
                     textLayoutResult = labelLayout,
@@ -140,15 +142,15 @@ fun WeeklyChart(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Canvas(modifier = Modifier.height(10.dp).padding(end = 4.dp)) {
-                    drawCircle(color = PurplePrimary, radius = 5.dp.toPx())
+                    drawCircle(color = baseBarColor, radius = 5.dp.toPx())
                 }
-                Text("Base Hours", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Base Hours", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Canvas(modifier = Modifier.height(10.dp).padding(end = 4.dp)) {
-                    drawCircle(color = RoseError, radius = 5.dp.toPx())
+                    drawCircle(color = overtimeColor, radius = 5.dp.toPx())
                 }
-                Text("Overtime", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Overtime", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

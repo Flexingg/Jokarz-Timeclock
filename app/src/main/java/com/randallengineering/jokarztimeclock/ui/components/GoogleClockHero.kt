@@ -12,7 +12,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,14 +25,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
@@ -41,9 +38,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.material3.toShape
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,18 +49,16 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.randallengineering.jokarztimeclock.ui.theme.TimerInlineStyle
 import com.randallengineering.jokarztimeclock.data.models.PayMode
 import com.randallengineering.jokarztimeclock.data.models.TimeclockState
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
-import com.randallengineering.jokarztimeclock.ui.theme.AmberWarning
-import com.randallengineering.jokarztimeclock.ui.theme.EmeraldSuccess
-import com.randallengineering.jokarztimeclock.ui.theme.PurpleAccent
-import com.randallengineering.jokarztimeclock.ui.theme.RoseError
+import com.randallengineering.jokarztimeclock.ui.theme.AppMotion
+import com.randallengineering.jokarztimeclock.ui.theme.ExpressiveButtonSize
 import com.randallengineering.jokarztimeclock.ui.theme.ShiftRing
 import com.randallengineering.jokarztimeclock.ui.theme.StagePose
 import com.randallengineering.jokarztimeclock.ui.theme.TimerDisplayStyle
@@ -74,9 +69,9 @@ import kotlin.math.max
 
 /**
  * The "stage": one wavy-topped container holding the live timer and the primary action. Its corners
- * and wave depth spring (the theme's expressive motion scheme) to a new [StagePose] whenever the shift
- * state changes, and the primary button squashes and bounces back. The ring around the timer is the
- * official wavy progress indicator; the timer digits themselves are never animated.
+ * and wave depth ease (AppMotion.stageSpec, no overshoot) into a new [StagePose] whenever the shift
+ * state changes, and the primary action dips slightly and settles back to full size. The ring around
+ * the timer is the official wavy progress indicator; the timer digits themselves are never animated.
  */
 @Composable
 fun GoogleClockHero(
@@ -91,16 +86,16 @@ fun GoogleClockHero(
     val reducedMotion = rememberReducedMotion()
 
     val pose = StagePose.of(isClockedIn, state.isOnBreak)
-    val stageSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
-    val sizeSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
-    val poseSpec: AnimationSpec<Float> = if (reducedMotion) snap() else stageSpec
+    // Smooth settle, never past the new pose (the owner asked for no bounce; see ThemeMotionTest).
+    val sizeSpec = AppMotion.stageSpec<IntSize>()
+    val poseSpec: AnimationSpec<Float> = if (reducedMotion) snap() else AppMotion.stageSpec()
     val topStart by animateFloatAsState(pose.topStart, poseSpec, label = "stageTopStart")
     val topEnd by animateFloatAsState(pose.topEnd, poseSpec, label = "stageTopEnd")
     val bottomEnd by animateFloatAsState(pose.bottomEnd, poseSpec, label = "stageBottomEnd")
     val bottomStart by animateFloatAsState(pose.bottomStart, poseSpec, label = "stageBottomStart")
     val wave by animateFloatAsState(pose.waveAmplitude, poseSpec, label = "stageWave")
 
-    // Clocking in or out squashes the primary action, which then springs back.
+    // Clocking in or out dips the primary action slightly; it eases back to full size (no bounce).
     val statePulse = rememberStatePulse(isClockedIn, reducedMotion)
 
     Surface(
@@ -179,8 +174,8 @@ private fun ActiveShiftStage(
     val progress = ShiftRing.progress(elapsedMs, standardTargetMs, cliffTargetMs)
     val ringColor = when (ShiftRing.tier(elapsedMs, standardTargetMs, cliffTargetMs)) {
         ShiftRing.Tier.STANDARD -> MaterialTheme.colorScheme.primary
-        ShiftRing.Tier.BANKING -> AmberWarning
-        ShiftRing.Tier.CLIFF -> RoseError
+        ShiftRing.Tier.BANKING -> MaterialTheme.colorScheme.secondary
+        ShiftRing.Tier.CLIFF -> MaterialTheme.colorScheme.error
     }
     // The timer plate: onSurface on surfaceContainerHighest is a guaranteed high-contrast pair in
     // every preset and in wallpaper palettes, unlike anything derived from primary.
@@ -218,13 +213,13 @@ private fun ActiveShiftStage(
         // Center Digital Counter
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.clickable { onEditStartClick() }
+            modifier = Modifier.expressiveClickable { onEditStartClick() }
         ) {
             Text(
                 text = if (state.isOnBreak) "LUNCH / BREAK" else "ACTIVE SHIFT",
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = if (state.isOnBreak) AmberWarning else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (state.isOnBreak) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = 1.2.sp
             )
 
@@ -244,7 +239,7 @@ private fun ActiveShiftStage(
                 modifier = Modifier.padding(top = 2.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Edit,
+                    imageVector = Icons.Rounded.Edit,
                     contentDescription = "Edit start time",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(14.dp)
@@ -252,7 +247,7 @@ private fun ActiveShiftStage(
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "Edit Start",
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -283,10 +278,9 @@ private fun ActiveShiftStage(
                 val breakElapsed = state.accumulatedBreakMs + (currentTickMs - (state.breakStartTime ?: currentTickMs))
                 Text(
                     text = "On Break: ${PayrollEngine.formatDuration(breakElapsed)}",
-                    color = AmberWarning,
-                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.secondary,
+                    style = TimerInlineStyle,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace
                 )
             } else if (isMonThu) {
                 val prevBanked = PayrollEngine.getPreviousBankedHoursForCurrentWeek(startMs, state)
@@ -302,16 +296,16 @@ private fun ActiveShiftStage(
                     } else ""
                     Text(
                         text = "Standard Shift: ${PayrollEngine.formatDuration(remainingMs)} remaining$bankNote",
-                        color = EmeraldSuccess,
-                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                 } else if (elapsedMs < cliffTargetMs) {
                     val bankingHrs = (elapsedMs - standardMs) / 3600000.0
                     Text(
                         text = "Banking Buffer: +${String.format("%.2f", bankingHrs)}h (Unpaid)",
-                        color = AmberWarning,
-                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.secondary,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                 } else {
@@ -320,8 +314,8 @@ private fun ActiveShiftStage(
                     val moneyStr = if (settings.hideMoneyAmounts) "" else " • ${PayrollEngine.formatMoney(otPay)}"
                     Text(
                         text = "Overtime (${settings.otMultiplier}x): ${String.format("%.2f", otHours)}h$moneyStr",
-                        color = PurpleAccent,
-                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -332,8 +326,8 @@ private fun ActiveShiftStage(
                 val moneyStr = if (settings.hideMoneyAmounts) "" else " • ${PayrollEngine.formatMoney(pay)}"
                 Text(
                     text = "Weekend OT: ${String.format("%.2f", payableHours)}h$moneyStr",
-                    color = PurpleAccent,
-                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -342,66 +336,38 @@ private fun ActiveShiftStage(
 
     Spacer(modifier = Modifier.height(18.dp))
 
-    // Action Controls (Pause / Resume & Clock Out)
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        FilledTonalButton(
-            onClick = onBreakToggle,
-            // A wide button cannot carry a circle: toShape() scales the unit-square polygon to the
-            // button's box, so Circle on this shape would render as an ellipse. MaterialShapes.Pill
-            // is the official shape for a wide action, and it is what this button already looked like.
-            shape = MaterialShapes.Pill.toShape(),
-            colors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = if (state.isOnBreak) AmberWarning else MaterialTheme.colorScheme.surface,
-                contentColor = if (state.isOnBreak) Color.Black else AmberWarning
+    // Action Controls: one connected group (Break / Resume + Clock Out) at the M3 medium size.
+    val scheme = MaterialTheme.colorScheme
+    ConnectedButtonGroup(
+        size = ExpressiveButtonSize.Medium,
+        actions = listOf(
+            ConnectedAction(
+                text = if (state.isOnBreak) "Resume" else "Break",
+                icon = if (state.isOnBreak) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                onClick = onBreakToggle,
+                variant = if (state.isOnBreak) ButtonVariant.Filled else ButtonVariant.Tonal,
+                // On break the resume action is the one to reach for: the break accent, filled.
+                colors = if (state.isOnBreak) {
+                    ButtonDefaults.buttonColors(containerColor = scheme.secondary, contentColor = scheme.onSecondary)
+                } else null
             ),
-            modifier = Modifier.height(50.dp)
-        ) {
-            Icon(
-                imageVector = if (state.isOnBreak) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = if (state.isOnBreak) "Resume" else "Lunch / Pause",
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp
-            )
-        }
-
-        val clockOutInteraction = remember { MutableInteractionSource() }
-        val pressSquash = rememberPressSquash(clockOutInteraction, reducedMotion)
-        Button(
-            onClick = onClockToggle,
-            shape = MaterialShapes.Square.toShape(),
-            interactionSource = clockOutInteraction,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = RoseError,
-                contentColor = Color.White
-            ),
-            modifier = Modifier
-                .height(50.dp)
-                .graphicsLayer {
-                    scaleX = pressSquash.value * statePulse.value
-                    scaleY = scaleX
-                }
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Stop,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
+            ConnectedAction(
                 text = "Clock Out",
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
+                icon = Icons.Rounded.Stop,
+                onClick = onClockToggle,
+                variant = ButtonVariant.Filled,
+                colors = ButtonDefaults.buttonColors(containerColor = scheme.error, contentColor = scheme.onError),
+                weight = 1.25f
             )
-        }
-    }
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp)
+            .graphicsLayer {
+                scaleX = statePulse.value
+                scaleY = scaleX
+            }
+    )
 }
 
 @Composable
@@ -412,7 +378,7 @@ private fun ReadyStage(
 ) {
     Text(
         text = "READY FOR SHIFT",
-        fontSize = 12.sp,
+        style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         letterSpacing = 1.5.sp
@@ -420,7 +386,8 @@ private fun ReadyStage(
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    // The clock-in cookie (official MaterialShapes.Cookie9Sided): squashes while held, bounces on release.
+    // The clock-in cookie (official MaterialShapes.Cookie9Sided): dips slightly while held and eases
+    // back on release (ripple from the Surface, press-scale from rememberPressSquash).
     val interaction = remember { MutableInteractionSource() }
     val pressSquash = rememberPressSquash(interaction, reducedMotion)
 
@@ -442,7 +409,7 @@ private fun ReadyStage(
             verticalArrangement = Arrangement.Center
         ) {
             Icon(
-                imageVector = Icons.Filled.PlayArrow,
+                imageVector = Icons.Rounded.PlayArrow,
                 contentDescription = "Clock In",
                 tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(48.dp)
@@ -451,7 +418,7 @@ private fun ReadyStage(
             Text(
                 text = "CLOCK IN",
                 color = MaterialTheme.colorScheme.onPrimary,
-                fontSize = 15.sp,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp
             )
@@ -462,7 +429,7 @@ private fun ReadyStage(
 
     Text(
         text = "Tap to begin tracking today's hours",
-        fontSize = 12.sp,
+        style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }

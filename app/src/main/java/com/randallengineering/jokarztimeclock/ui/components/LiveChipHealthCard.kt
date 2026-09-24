@@ -10,31 +10,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BatteryAlert
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.NotificationsOff
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.rounded.BatteryAlert
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.randallengineering.jokarztimeclock.engine.LiveChipStatus
 import com.randallengineering.jokarztimeclock.engine.LiveChipStatusReader
-import com.randallengineering.jokarztimeclock.ui.theme.ExpressiveShapes
 
 /**
  * Live-chip health card.
@@ -114,33 +109,33 @@ private fun ChipDiagnostics(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
         ),
-        shape = ExpressiveShapes.Container
+        shape = MaterialTheme.shapes.medium
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    if (verdict.promoted) Icons.Filled.CheckCircle else Icons.Filled.Info,
+                    if (verdict.promoted) Icons.Rounded.CheckCircle else Icons.Rounded.Info,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(verdict.headline, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text(verdict.headline, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(6.dp))
-            Text(verdict.detail, fontSize = 12.sp)
+            Text(verdict.detail, style = MaterialTheme.typography.bodySmall)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 "$versionLabel • Android API ${snapshot.apiLevel}",
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (snapshot.apiLevel >= LiveChipStatus.PROMOTION_API) {
-                    Button(onClick = onOpenPromotionSettings) { Text("Live Updates settings", fontSize = 12.sp) }
+                    ScaledButton(onClick = onOpenPromotionSettings) { Text("Live Updates settings", style = MaterialTheme.typography.bodySmall) }
                 }
-                TextButton(onClick = onRecheck) { Text("Re-check", fontSize = 12.sp) }
+                ScaledTextButton(onClick = onRecheck) { Text("Re-check", style = MaterialTheme.typography.bodySmall) }
             }
         }
     }
@@ -171,7 +166,7 @@ private fun HealthWarnings(
                 modifier = modifier.fillMaxWidth().padding(vertical = 2.dp)
             ) {
                 Icon(
-                    Icons.Filled.CheckCircle,
+                    Icons.Rounded.CheckCircle,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(15.dp)
@@ -179,7 +174,7 @@ private fun HealthWarnings(
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Live status bar timer is on — the system keeps it ticking.",
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -192,13 +187,13 @@ private fun HealthWarnings(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f)
         ),
-        shape = ExpressiveShapes.Container
+        shape = MaterialTheme.shapes.medium
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             if (needsNotifications) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Filled.NotificationsOff,
+                        Icons.Rounded.NotificationsOff,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(18.dp)
@@ -206,7 +201,7 @@ private fun HealthWarnings(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "Notifications are off — no live timer chip",
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -214,12 +209,12 @@ private fun HealthWarnings(
                 Text(
                     "Clock in/out, history, totals and payroll all still work. You only lose the " +
                         "ticking status bar timer and the shift milestone alerts.",
-                    fontSize = 12.sp
+                    style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onAllowNotifications) { Text("Allow notifications", fontSize = 12.sp) }
-                    TextButton(onClick = onOpenNotificationSettings) { Text("Phone settings", fontSize = 12.sp) }
+                    ScaledButton(onClick = onAllowNotifications) { Text("Allow notifications", style = MaterialTheme.typography.bodySmall) }
+                    ScaledTextButton(onClick = onOpenNotificationSettings) { Text("Phone settings", style = MaterialTheme.typography.bodySmall) }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
             }
@@ -227,7 +222,7 @@ private fun HealthWarnings(
             if (needsBattery) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Filled.BatteryAlert,
+                        Icons.Rounded.BatteryAlert,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(18.dp)
@@ -235,7 +230,7 @@ private fun HealthWarnings(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "Stop ColorOS from pausing the app",
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -244,24 +239,24 @@ private fun HealthWarnings(
                     "Android is allowed to freeze background apps to save power. If it freezes this " +
                         "one, the shift keeps running but the status bar timer can stop moving. " +
                         "Exempt it from battery optimisation.",
-                    fontSize = 12.sp
+                    style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onRequestBatteryExemption) { Text("Battery: no restrictions", fontSize = 12.sp) }
-                    TextButton(onClick = onOpenAutostart) { Text("Autostart settings", fontSize = 12.sp) }
+                    ScaledButton(onClick = onRequestBatteryExemption) { Text("Battery: no restrictions", style = MaterialTheme.typography.bodySmall) }
+                    ScaledTextButton(onClick = onOpenAutostart) { Text("Autostart settings", style = MaterialTheme.typography.bodySmall) }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
-            TextButton(onClick = { showWhy = true }) {
-                Text("Why does this matter on my Oppo?", fontSize = 12.sp)
+            ScaledTextButton(onClick = { showWhy = true }) {
+                Text("Why does this matter on my Oppo?", style = MaterialTheme.typography.bodySmall)
             }
         }
     }
 
     if (showWhy) {
-        AlertDialog(
+        ExpressiveAlertDialog(
             onDismissRequest = { showWhy = false },
             title = { Text("Keeping the live timer alive", fontWeight = FontWeight.Bold) },
             text = {
@@ -269,7 +264,7 @@ private fun HealthWarnings(
                     Text(
                         "The timer in the status bar is drawn by Android itself, so nothing in this " +
                             "app has to wake up or run a loop for it to move.",
-                        fontSize = 13.sp
+                        style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
@@ -281,13 +276,13 @@ private fun HealthWarnings(
                             "Autostart / \"Allow background running\" in Battery settings, stops that.\n\n" +
                             "Swiping the app away from Recents does NOT close the shift: the service " +
                             "and the chip keep running.",
-                        fontSize = 13.sp
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             },
-            confirmButton = { Button(onClick = { showWhy = false }) { Text("Got it") } },
+            confirmButton = { DialogBackButton("Got it", filled = true, onClick = { showWhy = false }) },
             dismissButton = {
-                TextButton(onClick = { showWhy = false; onOpenAutostart() }) { Text("Open settings") }
+                ScaledTextButton(onClick = { showWhy = false; onOpenAutostart() }) { Text("Open settings") }
             }
         )
     }

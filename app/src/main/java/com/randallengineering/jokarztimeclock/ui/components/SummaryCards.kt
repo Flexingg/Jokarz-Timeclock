@@ -14,16 +14,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.randallengineering.jokarztimeclock.data.models.PeriodTotals
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
-import com.randallengineering.jokarztimeclock.ui.theme.EmeraldSuccess
-import com.randallengineering.jokarztimeclock.ui.theme.ExpressiveShapes
-import com.randallengineering.jokarztimeclock.ui.theme.PurpleAccent
+import com.randallengineering.jokarztimeclock.ui.theme.PillShape
+import com.randallengineering.jokarztimeclock.ui.theme.FigureStyle
 import com.randallengineering.jokarztimeclock.ui.theme.SummaryFigureStyle
 import java.util.Calendar
 
@@ -41,7 +38,7 @@ fun GoogleSummaryCards(
     ) {
         // Today Summary Card (Google Tonal Container)
         Surface(
-            shape = ExpressiveShapes.CardLeading,
+            shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
             tonalElevation = 2.dp,
             modifier = Modifier.weight(1f)
@@ -58,20 +55,20 @@ fun GoogleSummaryCards(
                 ) {
                     Text(
                         text = "TODAY",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         letterSpacing = 1.sp
                     )
                     Surface(
-                        shape = ExpressiveShapes.Pill,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        shape = PillShape,
+                        color = MaterialTheme.colorScheme.primaryContainer
                     ) {
                         Text(
                             text = todayStats?.type?.uppercase() ?: "SALARY",
-                            fontSize = 9.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
@@ -82,21 +79,21 @@ fun GoogleSummaryCards(
                 Text(
                     text = PayrollEngine.formatMoney(rememberCountingAmount(totals.todayEarnings), hide = hideMoney),
                     style = SummaryFigureStyle,
-                    color = EmeraldSuccess
+                    color = MaterialTheme.colorScheme.tertiary
                 )
 
                 if (totals.todayOtEarnings > 0.0) {
                     Text(
                         text = "+${PayrollEngine.formatMoney(totals.todayOtEarnings, hide = hideMoney)} Overtime",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = PurpleAccent
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
 
                 RollingText(
                     text = "${String.format("%.1f", todayStats?.payableHours ?: 0.0)}h Paid",
-                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
@@ -111,14 +108,12 @@ fun GoogleSummaryCards(
                 ) {
                     Text(
                         text = "Clocked",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = PayrollEngine.formatDurationShort(todayStats?.clockedMs ?: 0L),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
+                        style = FigureStyle,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -131,7 +126,7 @@ fun GoogleSummaryCards(
         val periodLabel = "${dStart.get(Calendar.MONTH) + 1}/${dStart.get(Calendar.DAY_OF_MONTH)} - ${dEnd.get(Calendar.MONTH) + 1}/${dEnd.get(Calendar.DAY_OF_MONTH)}"
 
         Surface(
-            shape = ExpressiveShapes.CardTrailing,
+            shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
             tonalElevation = 2.dp,
             modifier = Modifier.weight(1f)
@@ -148,20 +143,20 @@ fun GoogleSummaryCards(
                 ) {
                     Text(
                         text = "PAY PERIOD",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         letterSpacing = 1.sp
                     )
                     Surface(
-                        shape = ExpressiveShapes.Pill,
-                        color = EmeraldSuccess.copy(alpha = 0.15f)
+                        shape = PillShape,
+                        color = MaterialTheme.colorScheme.tertiaryContainer
                     ) {
                         Text(
                             text = periodLabel,
-                            fontSize = 9.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = EmeraldSuccess,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
@@ -172,13 +167,13 @@ fun GoogleSummaryCards(
                 Text(
                     text = PayrollEngine.formatMoney(rememberCountingAmount(totals.periodEarnings), hide = hideMoney),
                     style = SummaryFigureStyle,
-                    color = EmeraldSuccess
+                    color = MaterialTheme.colorScheme.tertiary
                 )
 
                 val ptoStr = if (totals.totalPtoHoursPeriod > 0.0) " (${String.format("%.1f", totals.totalPtoHoursPeriod)}h PTO)" else ""
                 RollingText(
                     text = "${String.format("%.1f", totals.totalPayableHoursPeriod)}h Paid$ptoStr",
-                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
@@ -193,14 +188,12 @@ fun GoogleSummaryCards(
                 ) {
                     Text(
                         text = "Clocked",
-                        fontSize = 11.sp,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = PayrollEngine.formatDurationShort(totals.totalClockedMsPeriod),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
+                        style = FigureStyle,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }

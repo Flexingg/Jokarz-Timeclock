@@ -6,7 +6,6 @@ import java.util.Locale
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,26 +22,22 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.FactCheck
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AssistChip
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AttachMoney
+import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.automirrored.rounded.FactCheck
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -53,14 +48,14 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -89,21 +84,27 @@ import com.randallengineering.jokarztimeclock.ui.dialogs.EditSessionDialog
 import com.randallengineering.jokarztimeclock.ui.dialogs.PtoManagementDialog
 import com.randallengineering.jokarztimeclock.ui.dialogs.SettingsDialog
 import com.randallengineering.jokarztimeclock.ui.dialogs.TimesheetReportDialog
-import com.randallengineering.jokarztimeclock.ui.theme.EmeraldSuccess
-import com.randallengineering.jokarztimeclock.ui.theme.ExpressiveShapes
 import com.randallengineering.jokarztimeclock.ui.theme.JokarzTimeclockTheme
-import com.randallengineering.jokarztimeclock.ui.theme.PurplePrimary
 import com.randallengineering.jokarztimeclock.ui.viewmodel.TimeclockViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 import android.Manifest
-import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
-import androidx.core.content.ContextCompat
+import com.randallengineering.jokarztimeclock.ui.components.ScaledFilledTonalIconButton
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.toShape
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.semantics
+import com.randallengineering.jokarztimeclock.engine.InputValidation
+import com.randallengineering.jokarztimeclock.ui.components.ConnectedToggleGroup
+import com.randallengineering.jokarztimeclock.ui.theme.ExpressiveButtonSize
+import com.randallengineering.jokarztimeclock.ui.theme.PillShape
+import com.randallengineering.jokarztimeclock.ui.components.ScaledAssistChip
+import com.randallengineering.jokarztimeclock.ui.components.expressiveClickable
 
 /** Short tick on the clock in/out tap, through the existing AudioHapticEngine. */
 private const val HAPTIC_TAP_MS = 20L
@@ -272,13 +273,13 @@ fun GoogleTimeclockScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
-                            shape = ExpressiveShapes.Cookie,
+                            shape = MaterialShapes.Cookie9Sided.toShape(),
                             color = MaterialTheme.colorScheme.primaryContainer,
                             modifier = Modifier.size(38.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    imageVector = Icons.Filled.Timer,
+                                    imageVector = Icons.Rounded.Timer,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier.size(20.dp)
@@ -289,13 +290,13 @@ fun GoogleTimeclockScreen(
                         Column {
                             Text(
                                 text = "Timeclock",
-                                fontSize = 17.sp,
+                                style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Randall Engineering",
-                                fontSize = 11.sp,
+                                style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -308,15 +309,15 @@ fun GoogleTimeclockScreen(
                         badge = {
                             if (pendingOtCount > 0) {
                                 Badge(
-                                    containerColor = com.randallengineering.jokarztimeclock.ui.theme.RoseError,
-                                    contentColor = Color.White
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
                                 ) {
-                                    Text("$pendingOtCount", fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    Text("$pendingOtCount", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
                     ) {
-                        FilledTonalIconButton(
+                        ScaledFilledTonalIconButton(
                             onClick = {
                                 viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
                                 showOvertimeDialog = true
@@ -324,13 +325,12 @@ fun GoogleTimeclockScreen(
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
                                 containerColor = if (pendingOtCount > 0) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.surfaceVariant
                             ),
-                            shape = ExpressiveShapes.Tile,
-                            modifier = Modifier.size(38.dp)
+                            modifier = Modifier.size(40.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.FactCheck,
+                                imageVector = Icons.AutoMirrored.Rounded.FactCheck,
                                 contentDescription = "Overtime System Input",
-                                tint = if (pendingOtCount > 0) com.randallengineering.jokarztimeclock.ui.theme.RoseError else MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = if (pendingOtCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -338,7 +338,7 @@ fun GoogleTimeclockScreen(
 
                     Spacer(modifier = Modifier.width(6.dp))
 
-                    FilledTonalIconButton(
+                    ScaledFilledTonalIconButton(
                         onClick = {
                             val newHide = !state.settings.hideMoneyAmounts
                             viewModel.updateSettings(state.settings.copy(hideMoneyAmounts = newHide))
@@ -347,11 +347,10 @@ fun GoogleTimeclockScreen(
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
-                        shape = ExpressiveShapes.Tile,
-                        modifier = Modifier.size(38.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-                            imageVector = if (state.settings.hideMoneyAmounts) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            imageVector = if (state.settings.hideMoneyAmounts) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
                             contentDescription = "Toggle Money Visibility",
                             tint = if (state.settings.hideMoneyAmounts) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
@@ -360,7 +359,7 @@ fun GoogleTimeclockScreen(
 
                     Spacer(modifier = Modifier.width(6.dp))
 
-                    FilledTonalIconButton(
+                    ScaledFilledTonalIconButton(
                         onClick = {
                             viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
                             showAnalyticsDialog = true
@@ -368,11 +367,10 @@ fun GoogleTimeclockScreen(
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
-                        shape = ExpressiveShapes.Tile,
-                        modifier = Modifier.size(38.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.BarChart,
+                            imageVector = Icons.Rounded.BarChart,
                             contentDescription = "Analytics",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
@@ -381,7 +379,7 @@ fun GoogleTimeclockScreen(
 
                     Spacer(modifier = Modifier.width(6.dp))
 
-                    FilledTonalIconButton(
+                    ScaledFilledTonalIconButton(
                         onClick = {
                             viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
                             showSettingsDialog = true
@@ -389,11 +387,10 @@ fun GoogleTimeclockScreen(
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
-                        shape = ExpressiveShapes.Tile,
-                        modifier = Modifier.size(38.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Settings,
+                            imageVector = Icons.Rounded.Settings,
                             contentDescription = "Settings",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
@@ -418,7 +415,7 @@ fun GoogleTimeclockScreen(
             // Always visible, straight from BuildConfig, so the owner can see which build is installed.
             Text(
                 text = AppVersion.label,
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -428,7 +425,7 @@ fun GoogleTimeclockScreen(
 
             // Google Material 3 Segmented Rate Switcher & Input Capsule
             Surface(
-                shape = ExpressiveShapes.Pill,
+                shape = PillShape,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
                 tonalElevation = 1.dp,
                 modifier = Modifier.fillMaxWidth()
@@ -438,53 +435,30 @@ fun GoogleTimeclockScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    // Gross vs Take Home Switcher
-                    Surface(
-                        shape = ExpressiveShapes.Pill,
-                        color = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 2.dp
-                    ) {
-                        Row(modifier = Modifier.padding(3.dp)) {
-                            Surface(
-                                shape = ExpressiveShapes.Pill,
-                                color = if (state.displayMode == PayMode.GROSS) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                modifier = Modifier.clickable { viewModel.setMode(PayMode.GROSS) }
-                            ) {
-                                Text(
-                                    text = "Gross",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (state.displayMode == PayMode.GROSS) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                )
-                            }
+                    // Gross vs Take Home: a connected single-choice group (extra-small, 32 dp).
+                    ConnectedToggleGroup(
+                        options = listOf(PayMode.GROSS, PayMode.NET),
+                        selected = state.displayMode,
+                        onSelect = { viewModel.setMode(it) },
+                        label = { if (it == PayMode.GROSS) "Gross" else "Take Home" },
+                        size = ExpressiveButtonSize.ExtraSmall,
+                        modifier = Modifier.weight(1f)
+                    )
 
-                            Surface(
-                                shape = ExpressiveShapes.Pill,
-                                color = if (state.displayMode == PayMode.NET) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                modifier = Modifier.clickable { viewModel.setMode(PayMode.NET) }
-                            ) {
-                                Text(
-                                    text = "Take Home",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (state.displayMode == PayMode.NET) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                )
-                            }
-                        }
-                    }
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     // Editable Rate
                     val currentRate = if (state.displayMode == PayMode.GROSS) state.grossRate else state.netRate
                     var rateText by remember(currentRate) { mutableStateOf<String>(String.format(Locale.US, "%.1f", currentRate)) }
+                    // Only a valid rate is applied; anything else stays on screen in the error colour.
+                    val rateCheck = InputValidation.rate(rateText)
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(end = 4.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.AttachMoney,
+                            imageVector = Icons.Rounded.AttachMoney,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
@@ -493,22 +467,22 @@ fun GoogleTimeclockScreen(
                             value = rateText,
                             onValueChange = { newText: String ->
                                 rateText = newText
-                                newText.toDoubleOrNull()?.let { r: Double ->
+                                InputValidation.rate(newText).value?.let { r: Double ->
                                     viewModel.setRate(state.displayMode, r)
                                 }
                             },
-                            textStyle = TextStyle(
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                            textStyle = MaterialTheme.typography.titleSmall.copy(
+                                color = if (rateCheck.ok) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
                             ),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            modifier = Modifier.width(48.dp)
+                            modifier = Modifier
+                                .width(52.dp)
+                                .semantics { if (!rateCheck.ok) error(rateCheck.error ?: "Invalid rate") }
                         )
                         Text(
                             text = "/hr",
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -587,21 +561,21 @@ fun GoogleTimeclockScreen(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                AssistChip(
+                ScaledAssistChip(
                     onClick = {
                         viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
                         showAddShiftDialog = true
                     },
-                    label = { Text("Add Shift", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                    label = { Text("Add Shift", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold) },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Filled.Add,
+                            imageVector = Icons.Rounded.Add,
                             contentDescription = null,
                             modifier = Modifier.size(15.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     },
-                    shape = ExpressiveShapes.Pill,
+                    shape = PillShape,
                     colors = AssistChipDefaults.assistChipColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
                     ),
@@ -609,7 +583,7 @@ fun GoogleTimeclockScreen(
                     modifier = Modifier.weight(1f)
                 )
 
-                AssistChip(
+                ScaledAssistChip(
                     onClick = {
                         viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
                         showOvertimeDialog = true
@@ -617,20 +591,20 @@ fun GoogleTimeclockScreen(
                     label = {
                         Text(
                             text = if (pendingOtCount > 0) "OT ($pendingOtCount)" else "OT Input",
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = if (pendingOtCount > 0) com.randallengineering.jokarztimeclock.ui.theme.RoseError else MaterialTheme.colorScheme.onSurface
+                            color = if (pendingOtCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                         )
                     },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Filled.FactCheck,
+                            imageVector = Icons.AutoMirrored.Rounded.FactCheck,
                             contentDescription = null,
                             modifier = Modifier.size(15.dp),
-                            tint = if (pendingOtCount > 0) com.randallengineering.jokarztimeclock.ui.theme.RoseError else MaterialTheme.colorScheme.primary
+                            tint = if (pendingOtCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                         )
                     },
-                    shape = ExpressiveShapes.Pill,
+                    shape = PillShape,
                     colors = AssistChipDefaults.assistChipColors(
                         containerColor = if (pendingOtCount > 0) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
                     ),
@@ -638,21 +612,21 @@ fun GoogleTimeclockScreen(
                     modifier = Modifier.weight(1f)
                 )
 
-                AssistChip(
+                ScaledAssistChip(
                     onClick = {
                         viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
                         showPtoDialog = true
                     },
-                    label = { Text("PTO/Hol", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                    label = { Text("PTO/Hol", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold) },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Filled.CalendarMonth,
+                            imageVector = Icons.Rounded.CalendarMonth,
                             contentDescription = null,
                             modifier = Modifier.size(15.dp),
-                            tint = EmeraldSuccess
+                            tint = MaterialTheme.colorScheme.tertiary
                         )
                     },
-                    shape = ExpressiveShapes.Pill,
+                    shape = PillShape,
                     colors = AssistChipDefaults.assistChipColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
                     ),
@@ -660,21 +634,21 @@ fun GoogleTimeclockScreen(
                     modifier = Modifier.weight(1f)
                 )
 
-                AssistChip(
+                ScaledAssistChip(
                     onClick = {
                         viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
                         showReportDialog = true
                     },
-                    label = { Text("Report", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                    label = { Text("Report", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold) },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Filled.Description,
+                            imageVector = Icons.Rounded.Description,
                             contentDescription = null,
                             modifier = Modifier.size(15.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
-                    shape = ExpressiveShapes.Pill,
+                    shape = PillShape,
                     colors = AssistChipDefaults.assistChipColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
                     ),
@@ -701,7 +675,9 @@ fun GoogleTimeclockScreen(
                 onSessionClick = { idx, s ->
                     selectedSessionForEdit = Pair(idx, s)
                 },
-                modifier = Modifier.height(280.dp)
+                // PeriodTotals' end is the last millisecond of the period; the filter wants [start, end).
+                payPeriod = totals.startOfPeriod to totals.endOfPeriod + 1L,
+                onAddShift = { showAddShiftDialog = true }
             )
 
             Spacer(modifier = Modifier.height(24.dp))

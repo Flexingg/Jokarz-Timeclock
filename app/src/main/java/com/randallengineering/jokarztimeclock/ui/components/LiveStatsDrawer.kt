@@ -5,7 +5,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,13 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -29,18 +26,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.randallengineering.jokarztimeclock.ui.theme.PillShape
+import com.randallengineering.jokarztimeclock.ui.theme.TimerInlineStyle
 import com.randallengineering.jokarztimeclock.data.models.PayMode
 import com.randallengineering.jokarztimeclock.data.models.TimeclockState
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
-import com.randallengineering.jokarztimeclock.ui.theme.AmberWarning
-import com.randallengineering.jokarztimeclock.ui.theme.EmeraldSuccess
-import com.randallengineering.jokarztimeclock.ui.theme.PurpleAccent
-import com.randallengineering.jokarztimeclock.ui.theme.RoseError
 import java.util.Calendar
 import kotlin.math.abs
 
@@ -68,9 +61,9 @@ fun LiveStatsDrawer(
         ) {
             // Live Digital Timer (Click to edit start time)
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.small,
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-                modifier = Modifier.clickable { onEditStartClick() }
+                modifier = Modifier.expressiveClickable(onClick = onEditStartClick)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -79,14 +72,12 @@ fun LiveStatsDrawer(
                     Text(
                         text = PayrollEngine.formatDuration(elapsedMs),
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Light,
-                        fontFamily = FontFamily.Monospace,
+                        style = TimerInlineStyle,
                         letterSpacing = 1.sp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(
-                        imageVector = Icons.Filled.Edit,
+                        imageVector = Icons.Rounded.Edit,
                         contentDescription = "Edit Start Time",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
@@ -111,16 +102,15 @@ fun LiveStatsDrawer(
                 ) {
                     Text(
                         text = "ON BREAK / LUNCH: ",
-                        color = AmberWarning,
-                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.secondary,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = PayrollEngine.formatDuration(breakElapsed),
-                        color = AmberWarning,
-                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.secondary,
+                        style = TimerInlineStyle,
                         fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace
                     )
                 }
             } else if (isMonThu) {
@@ -135,7 +125,7 @@ fun LiveStatsDrawer(
                         val sign = if (prevBanked > 0) "+" else ""
                         " ($sign${String.format("%.1f", prevBanked)}h bank)"
                     } else ""
-                    val bankColor = if (prevBanked >= 0) AmberWarning else RoseError
+                    val bankColor = if (prevBanked >= 0) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -144,15 +134,14 @@ fun LiveStatsDrawer(
                         Text(
                             text = "REMAINING$bankText: ",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = PayrollEngine.formatDuration(remainingMs),
-                            color = EmeraldSuccess,
-                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            style = TimerInlineStyle,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace
                         )
                     }
                 } else if (elapsedMs < cliffMs) {
@@ -163,16 +152,15 @@ fun LiveStatsDrawer(
                     ) {
                         Text(
                             text = "BANKING UNPAID: ",
-                            color = AmberWarning,
-                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.secondary,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "+${String.format("%.2f", bankingHrs)}h",
-                            color = AmberWarning,
-                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.secondary,
+                            style = TimerInlineStyle,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace
                         )
                     }
                 } else {
@@ -184,16 +172,15 @@ fun LiveStatsDrawer(
                     ) {
                         Text(
                             text = "LIVE OT (${settings.otMultiplier}x): ",
-                            color = PurpleAccent,
-                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "${String.format("%.2f", otHours)}h | ${PayrollEngine.formatMoney(otPay)}",
-                            color = PurpleAccent,
-                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            style = TimerInlineStyle,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace
                         )
                     }
                 }
@@ -207,16 +194,15 @@ fun LiveStatsDrawer(
                 ) {
                     Text(
                         text = "WEEKEND OT: ",
-                        color = PurpleAccent,
-                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "${String.format("%.2f", payableHours)}h | ${PayrollEngine.formatMoney(pay)}",
-                        color = PurpleAccent,
-                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        style = TimerInlineStyle,
                         fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace
                     )
                 }
             }
@@ -224,24 +210,24 @@ fun LiveStatsDrawer(
             Spacer(modifier = Modifier.height(10.dp))
 
             // Break / Lunch Button
-            ElevatedButton(
+            ScaledElevatedButton(
                 onClick = onBreakToggle,
-                shape = RoundedCornerShape(20.dp),
+                shape = PillShape,
                 colors = ButtonDefaults.elevatedButtonColors(
-                    containerColor = if (state.isOnBreak) AmberWarning else MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = if (state.isOnBreak) Color.Black else AmberWarning
+                    containerColor = if (state.isOnBreak) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = if (state.isOnBreak) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.secondary
                 ),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 6.dp)
             ) {
                 Icon(
-                    imageVector = if (state.isOnBreak) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                    imageVector = if (state.isOnBreak) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = if (state.isOnBreak) "Resume Shift" else "Break / Lunch",
-                    fontSize = 12.sp,
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold
                 )
             }

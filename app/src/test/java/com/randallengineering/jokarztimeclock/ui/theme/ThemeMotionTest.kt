@@ -22,6 +22,36 @@ class ThemeMotionTest {
         assertNotEquals(MotionScheme.expressive()::class, AppMotionScheme::class)
     }
 
+    /**
+     * Pinning [AppMotionScheme] is only half the guard: it must also be the scheme the theme actually
+     * hands to MaterialExpressiveTheme. This reads the real sources, so re-introducing the expressive
+     * scheme at the call site (what the earlier pass did) fails here even though the constant above is
+     * untouched. A mutation proof caught exactly that gap before this test existed.
+     */
+    @Test
+    fun theThemeWiresTheStandardSchemeAndNoSourceBuildsTheExpressiveOne() {
+        val files = SourceTree.mainKotlinFiles()
+        assertTrue("no sources scanned", files.isNotEmpty())
+
+        // Comments are stripped, so a mention of the expressive scheme in prose is not a violation.
+        val expressive = files.flatMap { file ->
+            file.codeLines()
+                .filter { (_, text) -> Regex("""MotionScheme\s*\.\s*expressive\s*\(""").containsMatchIn(text) }
+                .map { (line, text) -> "${file.relative}:$line: ${text.trim()}" }
+        }
+        assertTrue(
+            "MotionScheme.expressive() built in main sources (its spatial springs bounce):\n" +
+                expressive.joinToString("\n"),
+            expressive.isEmpty()
+        )
+
+        val theme = files.first { it.relative == ColorRoleEnforcementTest.THEME_DIR + "Theme.kt" }
+        assertTrue(
+            "Theme.kt does not wire `motionScheme = AppMotionScheme`",
+            Regex("""motionScheme\s*=\s*AppMotionScheme""").containsMatchIn(theme.code)
+        )
+    }
+
     @Test
     fun appSpecsNeverOvershootAndStayInBudget() {
         val specs = mapOf(

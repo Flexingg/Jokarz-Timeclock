@@ -1,7 +1,7 @@
 # ⏱️ Jokarz Timeclock (Native Jetpack Compose & Material You)
 
-[![Release](https://img.shields.io/badge/Release-v2.8.3-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.8.3)
-[![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.3.apk)
+[![Release](https://img.shields.io/badge/Release-v2.9.0-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.9.0)
+[![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.9.0.apk)
 [![Platform](https://img.shields.io/badge/Platform-Native%20Android%20Compose-blue.svg)](https://developer.android.com/jetpack/compose)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -14,12 +14,13 @@ itself.
 
 ## 📲 Download
 
-📥 **[JokarzTimeclock-2.8.3.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.8.3.apk)**
+📥 **[JokarzTimeclock-2.9.0.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.9.0.apk)**
 
-**LAN, from the workshop PC:** `http://192.168.1.146:4310/JokarzTimeclock-2.8.3.apk`
-(the same directory serves `JokarzTimeclock-2.8.3.apk.sha256` — check it, see below)
+**LAN, from the workshop PC:** `http://192.168.1.146:4310/JokarzTimeclock-2.9.0.apk`
+(the same directory serves `JokarzTimeclock-2.9.0.apk.sha256` — check it, see below)
 
-> **Install**: copy the `.apk` to the phone and tap it (allow *Install unknown apps* if asked).
+> **Install (v2.9.0)**: this one installs **in place, over v2.8.3** — same canonical key, no uninstall,
+> shift history kept. Copy the `.apk` to the phone and tap it (allow *Install unknown apps* if asked).
 >
 > ### ⚠️ This release needs ONE uninstall first — then never again
 >
@@ -49,6 +50,31 @@ itself.
 > On a PC: `sha256sum JokarzTimeclock-2.8.3.apk` and compare with the `.sha256` file (or the value in
 > the release notes). On the phone, the safest route is the **LAN link above** — a browser download
 > that gets interrupted or resumed is the classic way an APK arrives subtly corrupted.
+
+---
+
+## 🆕 v2.9.0 — the owner's Material 3 Expressive design language, with calm motion
+
+This release is the owner's own design brief implemented literally, and it **corrects the previous
+"playful" pass**: the bouncy springs are gone.
+
+* **Colours.** The canonical M3 purple light scheme, value for value (primary `#6750A4`,
+  onPrimaryContainer `#21005D`, surface `#FEF7FF`, surfaceContainerHighest `#E6E0E9`, outline
+  `#79747E`, inversePrimary `#D0BCFF`, error `#B3261E`, …). Every UI colour is now read through a
+  scheme role — a raw colour literal anywhere outside `ui/theme/Color.kt` fails the build.
+* **Shape.** 20 dp cards, 28 dp dialogs, pill buttons at every size. Buttons follow the M3 size scale
+  (XS 32 / S 40 / M 56 / L 96 / XL 136 dp) taking that size's side padding, label style and icon size,
+  with the corner radius at exactly half the height. A **connected button group** is a row with 3 dp
+  gaps where only the adjoining inner corners shrink to 8 dp.
+* **Type.** Roboto on the M3 type scale (`titleLarge`, `bodyMedium`, …) instead of ad-hoc sizes; the
+  live timer keeps its deliberate monospace tabular figures.
+* **Motion.** `MotionScheme.standard()` and eased tweens: **no bounce, no overshoot**, everything under
+  600 ms, reduced-motion still honoured. Back — Cancel, the system back button or the predictive back
+  gesture — plays a dialog's entry transition in reverse.
+* **New in this release:** search / date-range filtering of the shift history (by note or job code;
+  This week, Pay period, last 30 days, or a custom range, with the count and hours of what is shown),
+  a proper empty state, typed input validation with visible errors, and one fix found on the way —
+  the PTO date picker now reads a calendar date, so PTO lands on the day that was picked.
 
 ---
 

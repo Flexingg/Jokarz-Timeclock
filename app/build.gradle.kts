@@ -43,8 +43,8 @@ android {
         applicationId = "com.randallengineering.jokarztimeclock"
         minSdk = 26
         targetSdk = 36
-        versionCode = 15
-        versionName = "2.8.3"
+        versionCode = 16
+        versionName = "2.9.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

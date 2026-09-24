@@ -1,12 +1,12 @@
 # STATUS — Jokarz Timeclock
 
-**Current version:** v2.9.0 (`versionCode 16`) — built, tested, gated, released, served on the LAN.
+**Current version:** v2.9.1 (`versionCode 17`) — built, tested, gated, released.
 **Stack:** Kotlin + Jetpack Compose (material3 1.5.0-alpha10 ahead of the BOM), single `:app` module.
 Remote: `Flexingg/Jokarz-Timeclock`.
 **Signing:** the ONE canonical key (unchanged since v2.8.3) — `/home/hermes/secrets/jokarz-timeclock-release.jks`
 (outside the repo, `chmod 600`, never committed). Cert `CN=Jokarz Engineering`, **RSA 4096**,
 SHA-256 `c91e46ff61c7c5c0e61bb3dc37e4477341df68f2041f633b9c055a8e74ea8212`.
-**APK sha256:** `7b3fad4b1673ca771b99fee3f3c1ddb33f21a21a2d9ccd00652262bd9500b9bf` (13 066 603 bytes).
+**APK sha256:** `1c35ea2a7fd93ff64c0ff90ee7efa4a23956c7a0e08ad90d3461f26187bf1824` (13 066 610 bytes).
 
 ---
 

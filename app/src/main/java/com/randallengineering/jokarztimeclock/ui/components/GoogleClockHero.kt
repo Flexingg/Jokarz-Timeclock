@@ -58,7 +58,6 @@ import com.randallengineering.jokarztimeclock.data.models.PayMode
 import com.randallengineering.jokarztimeclock.data.models.TimeclockState
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
 import com.randallengineering.jokarztimeclock.ui.theme.AppMotion
-import com.randallengineering.jokarztimeclock.ui.theme.ExpressiveButtonSize
 import com.randallengineering.jokarztimeclock.ui.theme.ShiftRing
 import com.randallengineering.jokarztimeclock.ui.theme.StagePose
 import com.randallengineering.jokarztimeclock.ui.theme.TimerDisplayStyle
@@ -336,38 +335,73 @@ private fun ActiveShiftStage(
 
     Spacer(modifier = Modifier.height(18.dp))
 
-    // Action Controls: one connected group (Break / Resume + Clock Out) at the M3 medium size.
-    val scheme = MaterialTheme.colorScheme
-    ConnectedButtonGroup(
-        size = ExpressiveButtonSize.Medium,
-        actions = listOf(
-            ConnectedAction(
-                text = if (state.isOnBreak) "Resume" else "Break",
-                icon = if (state.isOnBreak) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
-                onClick = onBreakToggle,
-                variant = if (state.isOnBreak) ButtonVariant.Filled else ButtonVariant.Tonal,
-                // On break the resume action is the one to reach for: the break accent, filled.
-                colors = if (state.isOnBreak) {
-                    ButtonDefaults.buttonColors(containerColor = scheme.secondary, contentColor = scheme.onSecondary)
-                } else null
-            ),
-            ConnectedAction(
-                text = "Clock Out",
-                icon = Icons.Rounded.Stop,
-                onClick = onClockToggle,
-                variant = ButtonVariant.Filled,
-                colors = ButtonDefaults.buttonColors(containerColor = scheme.error, contentColor = scheme.onError),
-                weight = 1.25f
-            )
-        ),
+    // Action Controls: Break / Resume & Clock Out buttons
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp)
-            .graphicsLayer {
-                scaleX = statePulse.value
-                scaleY = scaleX
-            }
-    )
+    ) {
+        val clockOutInteraction = remember { MutableInteractionSource() }
+        val pressSquash = rememberPressSquash(clockOutInteraction, reducedMotion)
+
+        ScaledFilledTonalButton(
+            onClick = onBreakToggle,
+            shape = CircleShape,
+            colors = if (state.isOnBreak) {
+                ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary
+                )
+            } else {
+                ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            },
+            modifier = Modifier.height(48.dp)
+        ) {
+            Icon(
+                imageVector = if (state.isOnBreak) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = if (state.isOnBreak) "Resume" else "Break",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        ScaledButton(
+            onClick = onClockToggle,
+            shape = CircleShape,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.error,
+                contentColor = MaterialTheme.colorScheme.onError
+            ),
+            modifier = Modifier
+                .height(48.dp)
+                .graphicsLayer {
+                    scaleX = pressSquash.value * statePulse.value
+                    scaleY = scaleX
+                }
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Stop,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Clock Out",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
 }
 
 @Composable

@@ -294,9 +294,10 @@ class LiveShiftService : Service() {
      * ([LiveChipText.build], pure and unit-tested).
      *
      * `setWhen(chip.chronometerWhenMs)` + `setUsesChronometer(true)` (+ `setChronometerCountDown(true)`
-     * while a clock-out target is ahead) + `setOngoing(true)` + `setOnlyAlertOnce(true)` is the whole
-     * live-timer mechanism: SystemUI animates the value itself — in the promoted status bar chip on
-     * Android 16+, and in the shade on older versions. There is no app-side ticking of the timer.
+     * while a clock-out target is ahead) + `setOngoing(true)` + `setOnlyAlertOnce(true)` is the live-timer
+     * mechanism: SystemUI animates the seconds countdown in the expanded view, while the status bar chip
+     * / capsule displays `setContentTitle(chip.title)` with the time till leave (e.g. "Leave in 9h 44m"),
+     * refreshed at every wall-clock minute boundary.
      *
      * `setShortCriticalText()` is deliberately NOT used: when set, it replaces the chip's content,
      * so the chip would show a frozen string instead of the system timer.

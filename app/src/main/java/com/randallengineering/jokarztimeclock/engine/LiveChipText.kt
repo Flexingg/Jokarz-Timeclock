@@ -60,11 +60,30 @@ data class LiveChipText(
                 parts += if (past) "Past out ${wallTime(target)}" else "Out ${wallTime(target)}"
             }
 
+            val title = when {
+                !state.isClockedIn || target == null -> {
+                    if (state.isOnBreak) "Shift Paused" else "Shift Active"
+                }
+                countsDown -> {
+                    val remainingMs = (target - nowMs).coerceAtLeast(0L)
+                    val totalMins = (remainingMs + 59_999L) / 60_000L
+                    val hours = totalMins / 60L
+                    val mins = totalMins % 60L
+                    val timeStr = if (hours > 0L) "${hours}h ${mins}m" else "${mins}m"
+                    if (state.isOnBreak) "Paused • $timeStr" else "Leave in $timeStr"
+                }
+                past -> {
+                    if (state.isOnBreak) "Paused • Can leave" else "Can leave now"
+                }
+                else -> {
+                    if (state.isOnBreak) "Shift Paused" else "Shift Active"
+                }
+            }
+
             return LiveChipText(
-                // Static, stable title keeps the status bar chip / capsule alive on ColorOS.
-                title = if (state.isOnBreak) "Shift Paused" else "Shift Active",
+                title = title,
                 contentText = parts.joinToString(" • "),
-                chronometerWhenMs = if (countsDown && target != null) target else startMs,
+                chronometerWhenMs = if (countsDown) target else startMs,
                 countsDown = countsDown,
                 clockOutAtMs = target
             )

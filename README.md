@@ -1,7 +1,7 @@
 # ⏱️ Jokarz Timeclock (Native Jetpack Compose & Material You)
 
-[![Release](https://img.shields.io/badge/Release-v2.9.0-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.9.0)
-[![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.9.0.apk)
+[![Release](https://img.shields.io/badge/Release-v2.9.1-purple.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/tag/v2.9.1)
+[![Android APK](https://img.shields.io/badge/Download-Android%20APK-emerald.svg)](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.9.1.apk)
 [![Platform](https://img.shields.io/badge/Platform-Native%20Android%20Compose-blue.svg)](https://developer.android.com/jetpack/compose)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -14,12 +14,12 @@ itself.
 
 ## 📲 Download
 
-📥 **[JokarzTimeclock-2.9.0.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.9.0.apk)**
+📥 **[JokarzTimeclock-2.9.1.apk](https://github.com/Flexingg/Jokarz-Timeclock/releases/latest/download/JokarzTimeclock-2.9.1.apk)**
 
-**LAN, from the workshop PC:** `http://192.168.1.146:4310/JokarzTimeclock-2.9.0.apk`
-(the same directory serves `JokarzTimeclock-2.9.0.apk.sha256` — check it, see below)
+**LAN, from the workshop PC:** `http://192.168.1.146:4310/JokarzTimeclock-2.9.1.apk`
+(the same directory serves `JokarzTimeclock-2.9.1.apk.sha256` — check it, see below)
 
-> **Install (v2.9.0)**: this one installs **in place, over v2.8.3** — same canonical key, no uninstall,
+> **Install (v2.9.1)**: this one installs **in place, over v2.9.0 / v2.8.3** — same canonical key, no uninstall,
 > shift history kept. Copy the `.apk` to the phone and tap it (allow *Install unknown apps* if asked).
 >
 > ### ⚠️ This release needs ONE uninstall first — then never again
@@ -319,7 +319,7 @@ line. The 2.6.x behaviour cannot come back silently.
 | 2 | Non-runtime permission `android.permission.POST_PROMOTED_NOTIFICATIONS` | Declared in the manifest; present in the built APK (`aapt dump badging`) |
 | 3 | Request promotion (`EXTRA_REQUEST_PROMOTED_ONGOING`) | `setRequestPromotedOngoing(true)` → writes `android.requestPromotedOngoing` (string confirmed in the DEX) |
 | 4 | Ongoing | `setOngoing(true)` + `FLAG_ONGOING_EVENT` |
-| 5 | A content title | "Shift Active" / "Shift Paused" |
+| 5 | A content title | "Leave in Xh Ym" (time till leave) / "Shift Active" / "Paused • Xh Ym" |
 | 6 | No custom `RemoteViews` | none |
 | 7 | Not a group summary | none |
 | 8 | Channel not `IMPORTANCE_MIN` | channel `jokarz_live_shift_chip_v5`, `IMPORTANCE_HIGH`, silent |
@@ -333,9 +333,10 @@ Notes that matter:
 * **The progress bar is sampled, not animated.** It is computed when the notification is posted, so it
   moves when a state change re-posts (clock in, break toggle, milestone, shift edit). Animating the bar
   would require exactly the periodic re-post that this app deliberately does not have. The *live* number
-  is the system chronometer.
-* **No `setShortCriticalText`.** A static short-critical-text replaces the chip's content, which would
-  freeze the timer into a fixed string. The chip therefore shows the system elapsed timer from `setWhen`.
+  in the expanded view is the system chronometer.
+* **Status bar chip displays time till leave.** The minimized status bar chip / capsule displays the content
+  title (e.g. "Leave in 9h 44m", "Leave in 44m", "Can leave now", or "Paused • 9h 44m"), updated at wall-clock
+  minute boundaries, while the expanded view continues to animate the live seconds countdown to clock-out.
 * The old hand-written `oplus.*` / `com.oplus.*` / `android.extra.*` "capsule" extras were **deleted**.
   Nothing in AOSP or the ColorOS SDK reads those keys; shipping them only made the previous release look
   like it was doing something on the Oppo.

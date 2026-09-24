@@ -67,10 +67,8 @@ fun LiveChipHealthCard(
     onRecheckChip: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val showDiagnostics = notificationsPermissionGranted && chipSnapshot != null && (
-        (isClockedIn && liveNotificationEnabled) ||
-            (chipSnapshot.apiLevel >= LiveChipStatus.PROMOTION_API && !chipSnapshot.canPostPromoted)
-        )
+    val showDiagnostics = notificationsPermissionGranted && chipSnapshot != null &&
+        (chipSnapshot.apiLevel >= LiveChipStatus.PROMOTION_API && !chipSnapshot.canPostPromoted)
 
     Column(modifier = modifier.fillMaxWidth()) {
         HealthWarnings(
@@ -160,25 +158,6 @@ private fun HealthWarnings(
     val needsBattery = !batteryExempt
 
     if (!needsNotifications && !needsBattery) {
-        if (isClockedIn && liveNotificationEnabled) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = modifier.fillMaxWidth().padding(vertical = 2.dp)
-            ) {
-                Icon(
-                    Icons.Rounded.CheckCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Live status bar timer is on — the system keeps it ticking.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
         return
     }
 

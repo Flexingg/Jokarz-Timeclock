@@ -44,7 +44,7 @@ class LiveChipTextTest {
         val state = clockedIn("2026-09-21 05:10")
         val chip = LiveChipText.build(state, at("2026-09-21 11:51"))
         assertEquals("Elapsed 6h 41m • Out 3:40 PM", chip.contentText)
-        assertEquals("Shift Active", chip.title)
+        assertEquals("Leave in 3h 49m", chip.title)
         assertTrue(chip.countsDown)
         // What goes into setWhen() is exactly the clock-out target.
         assertEquals(at("2026-09-21 15:40"), chip.chronometerWhenMs)
@@ -53,10 +53,25 @@ class LiveChipTextTest {
     }
 
     @Test
+    fun lessThanAnHourRemainingShowsMinutesOnlyInTitle() {
+        val state = clockedIn("2026-09-21 05:10")
+        val chip = LiveChipText.build(state, at("2026-09-21 15:00"))
+        assertEquals("Leave in 40m", chip.title)
+    }
+
+    @Test
+    fun lessThanOneMinuteRemainingShowsOneMinuteTitle() {
+        val state = clockedIn("2026-09-21 05:10")
+        val chip = LiveChipText.build(state, at("2026-09-21 15:39") + 45_000L)
+        assertEquals("Leave in 1m", chip.title)
+    }
+
+    @Test
     fun pastClockOutFallsBackToElapsedChronometerAndSaysPast() {
         val state = clockedIn("2026-09-21 05:10")
         val chip = LiveChipText.build(state, at("2026-09-21 16:30")) // banking buffer, no OT yet
         assertEquals("Elapsed 11h 20m • Past out 3:40 PM", chip.contentText)
+        assertEquals("Can leave now", chip.title)
         assertFalse(chip.countsDown)
         assertEquals(state.currentSessionStart, chip.chronometerWhenMs)
         assertFalse(chip.contentText.contains("$"))
@@ -66,6 +81,7 @@ class LiveChipTextTest {
     fun inOvertimeTheMoneyIsShown() {
         val chip = LiveChipText.build(clockedIn("2026-09-21 05:10"), at("2026-09-21 18:10"))
         assertEquals("Elapsed 13h 0m • OT 2.5h • $155.00 • Past out 3:40 PM", chip.contentText)
+        assertEquals("Can leave now", chip.title)
     }
 
     @Test
@@ -87,6 +103,7 @@ class LiveChipTextTest {
     fun weekendShowsOvertimeMoneyWhileStillCountingDown() {
         val chip = LiveChipText.build(clockedIn("2026-09-26 05:10"), at("2026-09-26 06:10"))
         assertEquals("Elapsed 1h 0m • OT 1.0h • $62.00 • Out 3:40 PM", chip.contentText)
+        assertEquals("Leave in 9h 30m", chip.title)
         assertTrue(chip.countsDown)
         assertEquals(at("2026-09-26 15:40"), chip.chronometerWhenMs)
     }
@@ -95,9 +112,24 @@ class LiveChipTextTest {
     fun onBreakKeepsTheExistingWording() {
         val state = clockedIn("2026-09-21 05:10").copy(isOnBreak = true, breakStartTime = at("2026-09-21 12:01"))
         val chip = LiveChipText.build(state, at("2026-09-21 12:20"))
-        assertEquals("Shift Paused", chip.title)
+        assertEquals("Paused • 3h 20m", chip.title)
         assertEquals("On break since 12:01 PM • Out 3:40 PM", chip.contentText)
         assertTrue(chip.countsDown)
+    }
+
+    @Test
+    fun onBreakPastTargetShowsPausedCanLeave() {
+        val state = clockedIn("2026-09-21 05:10").copy(isOnBreak = true, breakStartTime = at("2026-09-21 12:01"))
+        val chip = LiveChipText.build(state, at("2026-09-21 16:00"))
+        assertEquals("Paused • Can leave", chip.title)
+        assertFalse(chip.countsDown)
+    }
+
+    @Test
+    fun notClockedInShowsDefaultTitle() {
+        val state = TimeclockState(isClockedIn = false)
+        val chip = LiveChipText.build(state, at("2026-09-21 12:00"))
+        assertEquals("Shift Active", chip.title)
     }
 
     @Test

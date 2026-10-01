@@ -274,7 +274,7 @@ class LiveShiftService : Service() {
     private fun signatureOf(state: TimeclockState): String {
         val start = state.currentSessionStart ?: 0L
         return "$start|${state.isOnBreak}|${state.accumulatedBreakMs}|${state.settings.liveNotificationEnabled}" +
-            "|${state.settings.standardShiftHours}|${state.settings.cliffHours}|${state.settings.otMultiplier}" +
+            "|${state.settings.standardShiftHours}|${state.settings.effectiveCliffHours}|${state.settings.otMultiplier}" +
             "|${state.displayMode}|${state.settings.hideMoneyAmounts}"
     }
 
@@ -305,7 +305,9 @@ class LiveShiftService : Service() {
         val startMs = state.currentSessionStart ?: nowMs
         val settings = state.settings
         val mealBreakToAdd = if (settings.autoBreakDeduction) settings.unpaidMealDuration else 0.0
-        val targetHours = settings.standardShiftHours + mealBreakToAdd
+        val isMonThu = ShiftClockOutTarget.isMonThu(startMs)
+        val prevBanked = if (isMonThu) PayrollEngine.getPreviousBankedHoursForCurrentWeek(startMs, state) else 0.0
+        val targetHours = (settings.standardShiftHours + mealBreakToAdd) - prevBanked
 
         // Tap opens the app on the main screen (single instance, cleared stack).
         val contentIntent = Intent(this, MainActivity::class.java).apply {
@@ -336,7 +338,7 @@ class LiveShiftService : Service() {
         // Sampled at post time, so the bar moves only when the notification is re-posted: a state
         // change or the minute refresh (which posts only when the text changed). The live number
         // is the system chronometer.
-        val plan = ShiftProgressScale.plan(nowMs - startMs, targetHours, settings.cliffHours)
+        val plan = ShiftProgressScale.plan(nowMs - startMs, targetHours, settings.effectiveCliffHours)
         val progressStyle = NotificationCompat.ProgressStyle()
             // Segment lengths sum to ShiftProgressScale.MAX_MINUTES, which is the bar's max.
             .setProgressSegments(plan.segmentLengths.map { NotificationCompat.ProgressStyle.Segment(it) })

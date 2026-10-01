@@ -180,12 +180,13 @@ fun MaterialDatePickerDialog(
  */
 @Composable
 fun AddManualShiftDialog(
+    standardShiftHours: Double = 10.0,
     onDismiss: () -> Unit,
     onSave: (startMs: Long, endMs: Long, note: String, isPutInSystem: Boolean) -> Unit
 ) {
-    // Default (unchanged): an 8 h shift that ends now.
+    // Default: a standard shift that ends now.
     var endMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    var startMs by remember { mutableLongStateOf(endMs - 8L * 3_600_000L) }
+    var startMs by remember { mutableLongStateOf(endMs - (standardShiftHours * 3_600_000.0).toLong()) }
     var noteText by remember { mutableStateOf("") }
     var isPutInSystem by remember { mutableStateOf(false) }
 
@@ -352,12 +353,13 @@ fun AddManualShiftDialog(
 @Composable
 fun PtoManagementDialog(
     ptoEntries: List<PtoEntry>,
+    standardShiftHours: Double = 10.0,
     onDismiss: () -> Unit,
     onAddPto: (dateMs: Long, hours: Double, type: PtoType, note: String) -> Unit,
     onDeletePto: (id: String) -> Unit
 ) {
     var dateMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    var hoursText by remember { mutableStateOf("10.0") }
+    var hoursText by remember { mutableStateOf(String.format(Locale.US, "%.1f", standardShiftHours)) }
     var selectedType by remember { mutableStateOf(PtoType.PTO) }
     var noteText by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -559,7 +561,7 @@ fun SettingsDialog(
     // Typed as text and validated (InputValidation): the old Double-backed fields could not even be
     // cleared, and accepted an OT cliff inside the standard shift.
     var standardText by remember { mutableStateOf(currentSettings.standardShiftHours.toString()) }
-    var cliffText by remember { mutableStateOf(currentSettings.cliffHours.toString()) }
+    var cliffText by remember { mutableStateOf(currentSettings.effectiveCliffHours.toString()) }
     var otMultiplier by remember { mutableDoubleStateOf(currentSettings.otMultiplier) }
     var theme by remember { mutableStateOf(currentSettings.theme) }
     var soundEnabled by remember { mutableStateOf(currentSettings.soundEnabled) }
@@ -848,7 +850,18 @@ fun SettingsDialog(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = standardText,
-                        onValueChange = { standardText = it },
+                        onValueChange = { newStandard ->
+                            standardText = newStandard
+                            val newStandardVal = InputValidation.parseDecimal(newStandard)
+                            if (newStandardVal != null && newStandardVal in 1.0..24.0) {
+                                val meal = if (autoBreak) currentSettings.unpaidMealDuration else 0.0
+                                val currentCliffVal = InputValidation.parseDecimal(cliffText) ?: currentSettings.effectiveCliffHours
+                                val currentStandardVal = InputValidation.parseDecimal(currentSettings.standardShiftHours.toString()) ?: currentSettings.standardShiftHours
+                                val buffer = maxOf(0.0, currentCliffVal - (currentStandardVal + meal))
+                                val newCliff = newStandardVal + meal + (if (buffer > 0.0) buffer else 2.0)
+                                cliffText = String.format(Locale.US, "%.1f", newCliff)
+                            }
+                        },
                         label = { Text("Standard Shift") },
                         suffix = { Text("h") },
                         isError = !standardCheck.ok,

@@ -418,7 +418,7 @@ fun OvertimeSystemInputDialog(
                                                 color = MaterialTheme.colorScheme.surface
                                             ) {
                                                 Text(
-                                                    text = if (isMonThu) "Weekday Shift (>12.5h Cliff)" else "Weekend Overtime",
+                                                    text = if (isMonThu) "Weekday Shift (>${String.format(Locale.US, "%.1f", state.settings.effectiveCliffHours)}h Cliff)" else "Weekend Overtime",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.SemiBold,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,

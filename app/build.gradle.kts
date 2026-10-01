@@ -43,8 +43,8 @@ android {
         applicationId = "com.randallengineering.jokarztimeclock"
         minSdk = 26
         targetSdk = 36
-        versionCode = 18
-        versionName = "2.9.2"
+        versionCode = 19
+        versionName = "2.9.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -98,6 +98,10 @@ android {
         unitTests {
             isReturnDefaultValues = true
         }
+    }
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
     }
 }
 

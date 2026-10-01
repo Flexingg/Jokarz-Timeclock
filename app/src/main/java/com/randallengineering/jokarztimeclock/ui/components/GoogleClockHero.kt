@@ -165,8 +165,10 @@ private fun ActiveShiftStage(
 
     val settings = state.settings
     val mealToAdd = if (settings.autoBreakDeduction) settings.unpaidMealDuration else 0.0
-    val standardTargetMs = ((settings.standardShiftHours + mealToAdd) * 3600000.0).toLong()
-    val cliffTargetMs = (settings.cliffHours * 3600000.0).toLong()
+    val isMonThu = Calendar.getInstance().apply { timeInMillis = startMs }.get(Calendar.DAY_OF_WEEK) in Calendar.MONDAY..Calendar.THURSDAY
+    val prevBanked = if (isMonThu) PayrollEngine.getPreviousBankedHoursForCurrentWeek(startMs, state) else 0.0
+    val standardTargetMs = (((settings.standardShiftHours + mealToAdd) - prevBanked) * 3600000.0).toLong()
+    val cliffTargetMs = (settings.effectiveCliffHours * 3600000.0).toLong()
 
     // 0..1 across the standard shift, then again across standard → cliff.
     val progress = ShiftRing.progress(elapsedMs, standardTargetMs, cliffTargetMs)
@@ -249,9 +251,6 @@ private fun ActiveShiftStage(
     Spacer(modifier = Modifier.height(14.dp))
 
     // Real-time Shift Status Pill
-    val cal = Calendar.getInstance().apply { timeInMillis = startMs }
-    val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
-    val isMonThu = dayOfWeek in Calendar.MONDAY..Calendar.THURSDAY
     val rate = if (state.displayMode == PayMode.GROSS) state.grossRate else state.netRate
 
     Surface(

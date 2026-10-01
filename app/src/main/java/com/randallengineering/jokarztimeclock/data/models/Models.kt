@@ -47,7 +47,23 @@ data class AppSettings(
     val workLongitude: Double = 0.0,
     val geofenceRadiusMeters: Float = 150f,
     val workAddressName: String = ""
-)
+) {
+    /**
+     * The effective overtime cliff in hours. If standardShiftHours was changed away from 10.0
+     * but cliffHours remained at 12.5 (the 10h default), or if cliffHours is less than the standard
+     * shift requirement, this scales proportionally to keep the buffer.
+     */
+    val effectiveCliffHours: Double
+        get() {
+            val meal = if (autoBreakDeduction) unpaidMealDuration else 0.0
+            val minCliff = standardShiftHours + meal
+            return if (cliffHours < minCliff || (cliffHours == 12.5 && standardShiftHours != 10.0)) {
+                minCliff + 2.0
+            } else {
+                cliffHours
+            }
+        }
+}
 
 data class AuditEntry(
     val action: String,

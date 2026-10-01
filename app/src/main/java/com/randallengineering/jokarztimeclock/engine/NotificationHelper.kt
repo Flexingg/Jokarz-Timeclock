@@ -52,7 +52,7 @@ class NotificationHelper(private val context: Context) {
         }
     }
 
-    fun showStandardShiftCompleteNotification() {
+    fun showStandardShiftCompleteNotification(standardHours: Double = 10.0) {
         val intent = Intent(context, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             context, 0, intent,
@@ -62,7 +62,7 @@ class NotificationHelper(private val context: Context) {
         val notification = NotificationCompat.Builder(context, CHANNEL_MILESTONES_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("Standard Shift Complete! ✅")
-            .setContentText("You reached today's 10.0h requirement. Now entering unpaid banking buffer.")
+            .setContentText("You reached today's ${String.format(java.util.Locale.US, "%.1f", standardHours)}h requirement. Now entering unpaid banking buffer.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
@@ -71,17 +71,18 @@ class NotificationHelper(private val context: Context) {
         notificationManager.notify(NOTIFICATION_STANDARD_ID, notification)
     }
 
-    fun showOvertimeCliffNotification() {
+    fun showOvertimeCliffNotification(cliffHours: Double = 12.5, standardHours: Double = 10.0, mealBreak: Double = 0.5) {
         val intent = Intent(context, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             context, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val targetHours = standardHours + mealBreak
 
         val notification = NotificationCompat.Builder(context, CHANNEL_MILESTONES_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("Overtime Unlocked! 🔥")
-            .setContentText("You crossed the 12.5h mark! Overtime pay is now actively accruing back to 10.5h.")
+            .setContentText("You crossed the ${String.format(java.util.Locale.US, "%.1f", cliffHours)}h mark! Overtime pay is now actively accruing back to ${String.format(java.util.Locale.US, "%.1f", targetHours)}h.")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)

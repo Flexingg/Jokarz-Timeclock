@@ -54,7 +54,15 @@ class TimeclockRepository private constructor(private val context: Context) {
             val fileToRead = if (stateFile.exists()) stateFile else if (legacyFile.exists()) legacyFile else null
             if (fileToRead != null && fileToRead.exists()) {
                 val json = fileToRead.readText()
-                gson.fromJson(json, TimeclockState::class.java) ?: TimeclockState()
+                val loaded = gson.fromJson(json, TimeclockState::class.java) ?: TimeclockState()
+                val st = loaded.settings
+                if (st.cliffHours == 12.5 && st.standardShiftHours != 10.0) {
+                    val migrated = loaded.copy(settings = st.copy(cliffHours = st.effectiveCliffHours))
+                    persist(migrated)
+                    migrated
+                } else {
+                    loaded
+                }
             } else {
                 TimeclockState()
             }
@@ -94,7 +102,12 @@ class TimeclockRepository private constructor(private val context: Context) {
     }
 
     fun updateSettings(settings: AppSettings) {
-        updateState { it.copy(settings = settings) }
+        val sanitized = if (settings.cliffHours == 12.5 && settings.standardShiftHours != 10.0) {
+            settings.copy(cliffHours = settings.effectiveCliffHours)
+        } else {
+            settings
+        }
+        updateState { it.copy(settings = sanitized) }
     }
 
     fun clockIn() {

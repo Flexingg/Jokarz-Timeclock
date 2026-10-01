@@ -96,17 +96,18 @@ class TimeclockViewModel(application: Application) : AndroidViewModel(applicatio
             val mealBreakToAdd = if (s.settings.autoBreakDeduction) s.settings.unpaidMealDuration else 0.0
             val targetStandardHrs = (s.settings.standardShiftHours + mealBreakToAdd) - prevBanked
             val standardMs = (targetStandardHrs * 3600000.0).toLong()
-            val cliffMs = (s.settings.cliffHours * 3600000.0).toLong()
+            val cliffHours = s.settings.effectiveCliffHours
+            val cliffMs = (cliffHours * 3600000.0).toLong()
 
             if (elapsedMs >= standardMs && !standardNotified) {
                 standardNotified = true
-                notificationHelper.showStandardShiftCompleteNotification()
+                notificationHelper.showStandardShiftCompleteNotification(s.settings.standardShiftHours)
                 audioHaptic.playMilestoneChime(s.settings.soundEnabled)
             }
 
             if (elapsedMs >= cliffMs && !cliffNotified) {
                 cliffNotified = true
-                notificationHelper.showOvertimeCliffNotification()
+                notificationHelper.showOvertimeCliffNotification(cliffHours, s.settings.standardShiftHours, mealBreakToAdd)
                 audioHaptic.playMilestoneChime(s.settings.soundEnabled)
             }
         }

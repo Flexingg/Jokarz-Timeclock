@@ -137,4 +137,56 @@ class PayrollEngineTest {
         assertEquals(satStart, otSessions[0].second.start)
         assertEquals(monStart, otSessions[1].second.start)
     }
+
+    @Test
+    fun testStandardShiftChangeUniversalApplicationPastAndHistoricalShifts() {
+        // Monday shift: 6:00 AM to 4:30 PM (10.5h clocked -> auto 30m break -> 10.0h worked)
+        val monStart = sdf.parse("2026-08-24 06:00")!!.time
+        val monEnd = sdf.parse("2026-08-24 16:30")!!.time
+        val sessMon = Session(start = monStart, end = monEnd)
+
+        // 1. With standardShiftHours = 10.0 (default cliff 12.5)
+        val state10 = TimeclockState(
+            sessions = listOf(sessMon),
+            settings = AppSettings(standardShiftHours = 10.0, cliffHours = 12.5, autoBreakDeduction = true)
+        )
+        val stats10 = PayrollEngine.calculateDayStats(PayrollEngine.getStartOfDay(Date(monStart)), excludeActive = true, state = state10)
+        assertEquals(10.0, stats10.baseHours, 0.01)
+        assertEquals(0.0, stats10.otHours, 0.01)
+        assertEquals(0.0, stats10.bankedHours, 0.01)
+        assertEquals(0.0, PayrollEngine.calculateSessionOt(sessMon, state10), 0.01)
+        assertEquals(0, PayrollEngine.getOtSessions(state10).size)
+
+        // 2. Change standardShiftHours to 8.0: applies UNIVERSALLY to this past shift!
+        val state8 = state10.copy(settings = state10.settings.copy(standardShiftHours = 8.0))
+        val stats8 = PayrollEngine.calculateDayStats(PayrollEngine.getStartOfDay(Date(monStart)), excludeActive = true, state = state8)
+        assertEquals(8.0, stats8.baseHours, 0.01)
+        // 10.5h clocked >= 10.5h cliff -> 10.5 - 8.5 = 2.0h OT
+        assertEquals(2.0, stats8.otHours, 0.01)
+        assertEquals(0.0, stats8.bankedHours, 0.01)
+        assertEquals(10.0, stats8.payableHours, 0.01)
+        assertEquals(2.0, PayrollEngine.calculateSessionOt(sessMon, state8), 0.01)
+        val otSessions8 = PayrollEngine.getOtSessions(state8)
+        assertEquals(1, otSessions8.size)
+        assertEquals(sessMon.id, otSessions8[0].second.id)
+    }
+
+    @Test
+    fun testEffectiveCliffHoursCalculation() {
+        // Default 10h shift with 12.5h cliff
+        val s10 = AppSettings(standardShiftHours = 10.0, cliffHours = 12.5)
+        assertEquals(12.5, s10.effectiveCliffHours, 0.01)
+
+        // Standard shift changed to 8.0, but cliffHours left at 12.5 -> automatically 8.0 + 0.5 + 2.0 = 10.5
+        val s8 = AppSettings(standardShiftHours = 8.0, cliffHours = 12.5)
+        assertEquals(10.5, s8.effectiveCliffHours, 0.01)
+
+        // Explicit custom cliff: e.g. 11.0
+        val sCustom = AppSettings(standardShiftHours = 8.0, cliffHours = 11.0)
+        assertEquals(11.0, sCustom.effectiveCliffHours, 0.01)
+
+        // Without auto break: min cliff is 8.0 + 2.0 = 10.0
+        val sNoBreak = AppSettings(standardShiftHours = 8.0, cliffHours = 12.5, autoBreakDeduction = false)
+        assertEquals(10.0, sNoBreak.effectiveCliffHours, 0.01)
+    }
 }

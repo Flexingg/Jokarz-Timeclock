@@ -716,6 +716,7 @@ fun GoogleTimeclockScreen(
 
     if (showAddShiftDialog) {
         AddManualShiftDialog(
+            standardShiftHours = state.settings.standardShiftHours,
             onDismiss = { showAddShiftDialog = false },
             onSave = { start, end, note, isPutIn ->
                 viewModel.addManualSession(start, end, note, isPutIn)
@@ -745,6 +746,7 @@ fun GoogleTimeclockScreen(
     if (showPtoDialog) {
         PtoManagementDialog(
             ptoEntries = state.ptoEntries,
+            standardShiftHours = state.settings.standardShiftHours,
             onDismiss = { showPtoDialog = false },
             onAddPto = { date, hours, type, note ->
                 viewModel.addPto(date, hours, type, note)

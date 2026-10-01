@@ -163,7 +163,7 @@ object PayrollEngine {
         val standardSalaryHours = settings.standardShiftHours
         val unpaidMealThreshold = settings.unpaidMealThreshold
         val unpaidMealDuration = settings.unpaidMealDuration
-        val cliffHours = settings.cliffHours
+        val cliffHours = settings.effectiveCliffHours
         val otMultiplier = settings.otMultiplier
 
         val clockedHours = clockedMs / 3600000.0
@@ -373,7 +373,7 @@ object PayrollEngine {
         return if (isMonThu) {
             val mealBreak = if (settings.autoBreakDeduction) settings.unpaidMealDuration else 0.0
             val targetStandardShift = settings.standardShiftHours + mealBreak
-            if (clockedHours >= settings.cliffHours) {
+            if (clockedHours >= settings.effectiveCliffHours) {
                 maxOf(0.0, clockedHours - targetStandardShift)
             } else {
                 0.0

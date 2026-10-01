@@ -115,9 +115,10 @@ fun LiveStatsDrawer(
                 }
             } else if (isMonThu) {
                 val prevBanked = PayrollEngine.getPreviousBankedHoursForCurrentWeek(startMs, state)
-                val targetStandardHrs = (settings.standardShiftHours + settings.unpaidMealDuration) - prevBanked
+                val mealBreakToAdd = if (settings.autoBreakDeduction) settings.unpaidMealDuration else 0.0
+                val targetStandardHrs = (settings.standardShiftHours + mealBreakToAdd) - prevBanked
                 val standardMs = (targetStandardHrs * 3600000.0).toLong()
-                val cliffMs = (settings.cliffHours * 3600000.0).toLong()
+                val cliffMs = (settings.effectiveCliffHours * 3600000.0).toLong()
 
                 if (elapsedMs < standardMs) {
                     val remainingMs = standardMs - elapsedMs
@@ -164,7 +165,7 @@ fun LiveStatsDrawer(
                         )
                     }
                 } else {
-                    val otHours = (elapsedMs - ((settings.standardShiftHours + settings.unpaidMealDuration) * 3600000.0).toLong()) / 3600000.0
+                    val otHours = maxOf(0.0, (elapsedMs - standardMs) / 3600000.0)
                     val otPay = otHours * rate * settings.otMultiplier
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

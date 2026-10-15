@@ -11,6 +11,11 @@ import com.randallengineering.jokarztimeclock.engine.TaskerContract
 /** Handles the widget's Clock In / Clock Out tap with the same side effects as the in-app button. */
 class WidgetActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == WidgetUpdater.ACTION_TOGGLE_BREAK) {
+            TimeclockRepository.get(context).toggleBreak()
+            WidgetUpdater.updateAll(context)
+            return
+        }
         if (intent.action != WidgetUpdater.ACTION_TOGGLE_CLOCK) return
         val repository = TimeclockRepository.get(context)
         val settings = repository.state.value.settings

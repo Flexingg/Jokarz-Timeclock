@@ -12,6 +12,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Path
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,13 +58,15 @@ import com.randallengineering.jokarztimeclock.data.models.PayMode
 import com.randallengineering.jokarztimeclock.data.models.TimeclockState
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
 import com.randallengineering.jokarztimeclock.ui.theme.AppMotion
-import com.randallengineering.jokarztimeclock.ui.theme.CookieShape
 import com.randallengineering.jokarztimeclock.ui.theme.ShiftRing
 import com.randallengineering.jokarztimeclock.ui.theme.StagePose
 import com.randallengineering.jokarztimeclock.ui.theme.TimerDisplayStyle
 import com.randallengineering.jokarztimeclock.ui.theme.WavyTopShape
 import java.util.Calendar
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.math.max
 
 /**
@@ -410,24 +415,24 @@ private fun ReadyStage(
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    // The clock-in cookie: a plain 9-lobed scalloped disc from the app's own, unit-tested geometry.
-    // (The library MaterialShapes.Cookie9Sided.toShape() rendered clipped to a flat-bottomed sliver
-    // on this build, hiding the play icon.) Dips slightly while held and eases back on release.
-    val interaction = remember { MutableInteractionSource() }
-    val pressSquash = rememberPressSquash(interaction, reducedMotion)
+    // The clock-in cookie. It is painted straight onto a Canvas (a scalloped disc path) instead of
+    // being a Surface clipped to a Shape: on this device both the library cookie shape and the
+    // app's own CookieShape came out clipped to a flat-bottomed sliver that hid the play icon, so
+    // nothing here depends on an outline clip. Dips slightly while held (expressiveClickable) and on state change.
+    val cookieColor = MaterialTheme.colorScheme.primary
+    val onCookie = MaterialTheme.colorScheme.onPrimary
 
-    Surface(
-        onClick = onClockToggle,
-        shape = remember { CookieShape(biteDepth = 0f) },
-        color = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
-        interactionSource = interaction,
+    Box(
+        contentAlignment = Alignment.Center,
         modifier = Modifier
             .size(156.dp)
             .graphicsLayer {
-                scaleX = pressSquash.value * statePulse.value
+                scaleX = statePulse.value
                 scaleY = scaleX
             }
+            .drawBehind { drawPath(scallopedDisc(size.minDimension), cookieColor) }
+            .clip(CircleShape)
+            .expressiveClickable(onClick = onClockToggle)
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -436,13 +441,13 @@ private fun ReadyStage(
             Icon(
                 imageVector = Icons.Rounded.PlayArrow,
                 contentDescription = "Clock In",
-                tint = MaterialTheme.colorScheme.onPrimary,
+                tint = onCookie,
                 modifier = Modifier.size(48.dp)
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "CLOCK IN",
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = onCookie,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp
@@ -457,4 +462,20 @@ private fun ReadyStage(
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+}
+
+/** A 9-lobed scalloped disc filling a square of [diameter] px, as a closed polyline path. */
+private fun scallopedDisc(diameter: Float): Path {
+    val radius = diameter / 2f
+    val steps = 240
+    return Path().apply {
+        for (i in 0..steps) {
+            val phi = 2.0 * PI * i / steps
+            val r = radius * (1.0 - 0.06 * (1.0 - cos(9.0 * phi)) / 2.0).toFloat()
+            val x = radius + r * sin(phi).toFloat()
+            val y = radius - r * cos(phi).toFloat()
+            if (i == 0) moveTo(x, y) else lineTo(x, y)
+        }
+        close()
+    }
 }

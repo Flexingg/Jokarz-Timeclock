@@ -32,11 +32,9 @@ import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.toShape
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
@@ -57,6 +55,7 @@ import com.randallengineering.jokarztimeclock.data.models.PayMode
 import com.randallengineering.jokarztimeclock.data.models.TimeclockState
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
 import com.randallengineering.jokarztimeclock.ui.theme.AppMotion
+import com.randallengineering.jokarztimeclock.ui.theme.CookieShape
 import com.randallengineering.jokarztimeclock.ui.theme.ShiftRing
 import com.randallengineering.jokarztimeclock.ui.theme.StagePose
 import com.randallengineering.jokarztimeclock.ui.theme.TimerDisplayStyle
@@ -411,14 +410,15 @@ private fun ReadyStage(
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    // The clock-in cookie (official MaterialShapes.Cookie9Sided): dips slightly while held and eases
-    // back on release (ripple from the Surface, press-scale from rememberPressSquash).
+    // The clock-in cookie: a plain 9-lobed scalloped disc from the app's own, unit-tested geometry.
+    // (The library MaterialShapes.Cookie9Sided.toShape() rendered clipped to a flat-bottomed sliver
+    // on this build, hiding the play icon.) Dips slightly while held and eases back on release.
     val interaction = remember { MutableInteractionSource() }
     val pressSquash = rememberPressSquash(interaction, reducedMotion)
 
     Surface(
         onClick = onClockToggle,
-        shape = MaterialShapes.Cookie9Sided.toShape(),
+        shape = remember { CookieShape(biteDepth = 0f) },
         color = MaterialTheme.colorScheme.primary,
         contentColor = MaterialTheme.colorScheme.onPrimary,
         interactionSource = interaction,

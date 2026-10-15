@@ -58,6 +58,10 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="jokarz" android:host="timeclock" />
             </intent-filter>
+            <!-- Long-press launcher shortcuts: Clock In / Clock Out / Break (jokarz://timeclock?action=...). -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
 
         <service

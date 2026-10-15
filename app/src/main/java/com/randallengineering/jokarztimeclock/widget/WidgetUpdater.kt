@@ -5,13 +5,11 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.SystemClock
 import android.view.View
 import android.widget.RemoteViews
 import com.randallengineering.jokarztimeclock.MainActivity
 import com.randallengineering.jokarztimeclock.R
-import com.randallengineering.jokarztimeclock.data.models.PayMode
 import com.randallengineering.jokarztimeclock.data.repository.TimeclockRepository
 import com.randallengineering.jokarztimeclock.engine.PayrollEngine
 
@@ -23,6 +21,7 @@ import com.randallengineering.jokarztimeclock.engine.PayrollEngine
 object WidgetUpdater {
 
     const val ACTION_TOGGLE_CLOCK = "com.randallengineering.jokarztimeclock.widget.TOGGLE_CLOCK"
+    const val ACTION_TOGGLE_BREAK = "com.randallengineering.jokarztimeclock.widget.TOGGLE_BREAK"
 
     fun updateAll(context: Context) {
         val app = context.applicationContext
@@ -59,6 +58,14 @@ object WidgetUpdater {
                 else -> "ACTIVE SHIFT"
             }
         )
+        views.setImageViewResource(
+            R.id.widget_dot,
+            when {
+                !clockedIn -> R.drawable.widget_dot_idle
+                state.isOnBreak -> R.drawable.widget_dot_break
+                else -> R.drawable.widget_dot_active
+            }
+        )
 
         if (clockedIn) {
             // Chronometer counts from a SystemClock.elapsedRealtime() base.
@@ -66,25 +73,39 @@ object WidgetUpdater {
             views.setChronometer(R.id.widget_timer, base, null, !state.isOnBreak)
             views.setViewVisibility(R.id.widget_timer, View.VISIBLE)
             views.setViewVisibility(R.id.widget_idle, View.GONE)
+            views.setTextViewText(
+                R.id.widget_caption,
+                "since ${java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(start))}"
+            )
             views.setTextViewText(R.id.widget_action, "Clock Out")
-            views.setInt(R.id.widget_action, "setBackgroundResource", R.drawable.widget_button_stop)
+            views.setInt(R.id.widget_action_row, "setBackgroundResource", R.drawable.widget_button_stop)
             views.setTextColor(R.id.widget_action, 0xFF690005.toInt())
             views.setImageViewResource(R.id.widget_action_icon, R.drawable.ic_widget_stop)
+            views.setInt(R.id.widget_action_icon, "setColorFilter", 0xFF690005.toInt())
+
+            // Break toggle: pause while working, play while on break.
+            views.setViewVisibility(R.id.widget_break_row, View.VISIBLE)
+            views.setImageViewResource(
+                R.id.widget_break_icon,
+                if (state.isOnBreak) R.drawable.ic_widget_play else R.drawable.ic_widget_pause
+            )
+            views.setInt(R.id.widget_break_icon, "setColorFilter", 0xFFF7EEFB.toInt())
+            views.setOnClickPendingIntent(R.id.widget_break_row, actionPendingIntent(context, ACTION_TOGGLE_BREAK, 3))
         } else {
             views.setViewVisibility(R.id.widget_timer, View.GONE)
             views.setViewVisibility(R.id.widget_idle, View.VISIBLE)
+            views.setViewVisibility(R.id.widget_break_row, View.GONE)
             val today = PayrollEngine.calculatePeriodTotals(state).todayStats
-            views.setTextViewText(
-                R.id.widget_idle,
-                "Today ${PayrollEngine.formatDurationShort(today?.clockedMs ?: 0L)}"
-            )
+            views.setTextViewText(R.id.widget_idle, PayrollEngine.formatDurationShort(today?.clockedMs ?: 0L))
+            views.setTextViewText(R.id.widget_caption, "worked today")
             views.setTextViewText(R.id.widget_action, "Clock In")
-            views.setInt(R.id.widget_action, "setBackgroundResource", R.drawable.widget_button_play)
+            views.setInt(R.id.widget_action_row, "setBackgroundResource", R.drawable.widget_button_play)
             views.setTextColor(R.id.widget_action, 0xFF4A0A6B.toInt())
             views.setImageViewResource(R.id.widget_action_icon, R.drawable.ic_widget_play)
+            views.setInt(R.id.widget_action_icon, "setColorFilter", 0xFF4A0A6B.toInt())
         }
 
-        views.setOnClickPendingIntent(R.id.widget_action_row, togglePendingIntent(context))
+        views.setOnClickPendingIntent(R.id.widget_action_row, actionPendingIntent(context, ACTION_TOGGLE_CLOCK, 1))
         views.setOnClickPendingIntent(R.id.widget_root, openAppPendingIntent(context))
         return views
     }
@@ -95,8 +116,11 @@ object WidgetUpdater {
         val hide = state.settings.hideMoneyAmounts
         val views = RemoteViews(context.packageName, R.layout.widget_stats)
 
-        val mode = if (state.displayMode == PayMode.GROSS) "Gross" else "Take Home"
-        views.setTextViewText(R.id.widget_mode, mode.uppercase())
+        val fmt = java.text.SimpleDateFormat("M/d", java.util.Locale.US)
+        views.setTextViewText(
+            R.id.widget_period_label,
+            "${fmt.format(java.util.Date(totals.startOfPeriod))} - ${fmt.format(java.util.Date(totals.endOfPeriod))}"
+        )
         views.setTextViewText(R.id.widget_today_money, PayrollEngine.formatMoney(totals.todayEarnings, hide))
         views.setTextViewText(
             R.id.widget_today_hours,
@@ -112,11 +136,11 @@ object WidgetUpdater {
         return views
     }
 
-    private fun togglePendingIntent(context: Context): PendingIntent =
+    private fun actionPendingIntent(context: Context, action: String, requestCode: Int): PendingIntent =
         PendingIntent.getBroadcast(
             context,
-            1,
-            Intent(context, WidgetActionReceiver::class.java).setAction(ACTION_TOGGLE_CLOCK),
+            requestCode,
+            Intent(context, WidgetActionReceiver::class.java).setAction(action),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 

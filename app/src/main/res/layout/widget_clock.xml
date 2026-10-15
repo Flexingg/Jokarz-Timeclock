@@ -4,28 +4,46 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
-    android:gravity="center"
+    android:gravity="center_vertical"
     android:orientation="vertical"
-    android:padding="14dp">
+    android:paddingStart="18dp"
+    android:paddingTop="14dp"
+    android:paddingEnd="18dp"
+    android:paddingBottom="14dp">
 
-    <TextView
-        android:id="@+id/widget_status"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:letterSpacing="0.1"
-        android:text="READY FOR SHIFT"
-        android:textColor="#FFCFC2D6"
-        android:textSize="11sp"
-        android:textStyle="bold" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/widget_dot"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:contentDescription="@null"
+            android:src="@drawable/widget_dot_idle" />
+
+        <TextView
+            android:id="@+id/widget_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="7dp"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.12"
+            android:text="READY FOR SHIFT"
+            android:textColor="#FFCFC2D6"
+            android:textSize="11sp" />
+    </LinearLayout>
 
     <Chronometer
         android:id="@+id/widget_timer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:textColor="#FFF2E7F7"
-        android:textSize="30sp"
-        android:textStyle="bold"
+        android:fontFamily="sans-serif-light"
+        android:textColor="#FFF7EEFB"
+        android:textSize="38sp"
         android:visibility="gone" />
 
     <TextView
@@ -33,35 +51,68 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:textColor="#FFF2E7F7"
-        android:textSize="16sp" />
+        android:fontFamily="sans-serif-light"
+        android:text="0h 0m"
+        android:textColor="#FFF7EEFB"
+        android:textSize="38sp" />
 
-    <LinearLayout
-        android:id="@+id/widget_action_row"
+    <TextView
+        android:id="@+id/widget_caption"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:text="worked today"
+        android:textColor="#FFB3A5BB"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="20dp"
-        android:paddingBottom="8dp">
+        android:orientation="horizontal">
 
-        <ImageView
-            android:id="@+id/widget_action_icon"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_widget_play" />
+        <LinearLayout
+            android:id="@+id/widget_break_row"
+            android:layout_width="48dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/widget_button_tonal"
+            android:gravity="center"
+            android:visibility="gone">
 
-        <TextView
-            android:id="@+id/widget_action"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:text="Clock In"
-            android:textSize="15sp"
-            android:textStyle="bold" />
+            <ImageView
+                android:id="@+id/widget_break_icon"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:contentDescription="Start or end break"
+                android:src="@drawable/ic_widget_pause" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_action_row"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_button_play"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/widget_action_icon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_widget_play" />
+
+            <TextView
+                android:id="@+id/widget_action"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="Clock In"
+                android:textColor="#FF4A0A6B"
+                android:textSize="15sp" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

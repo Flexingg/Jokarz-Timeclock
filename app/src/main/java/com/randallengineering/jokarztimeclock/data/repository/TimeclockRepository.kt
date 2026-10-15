@@ -87,6 +87,8 @@ class TimeclockRepository private constructor(private val context: Context) {
         val next = transform(current)
         _state.value = next
         persist(next)
+        // Home-screen widgets mirror the persisted state, so every change refreshes them.
+        com.randallengineering.jokarztimeclock.widget.WidgetUpdater.updateAll(context)
     }
 
     fun setMode(mode: PayMode) {
@@ -348,6 +350,7 @@ class TimeclockRepository private constructor(private val context: Context) {
         }
         if (!AtomicStateWriter.write(stateFile, json)) return false
         _state.value = newState
+        com.randallengineering.jokarztimeclock.widget.WidgetUpdater.updateAll(context)
         // Undo entries are indices into the pre-import session list and would now hit the wrong shifts.
         undoStack.clear()
         return true

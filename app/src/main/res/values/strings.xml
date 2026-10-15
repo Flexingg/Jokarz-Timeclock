@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Jokarz Timeclock</string>
+    <string name="widget_clock_description">Clock in or out and watch the live shift timer</string>
+    <string name="widget_stats_description">Today\'s and this pay period\'s earnings</string>
 </resources>

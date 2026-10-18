@@ -15,7 +15,6 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Path
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
@@ -338,9 +336,6 @@ private fun ActiveShiftStage(
             .fillMaxWidth()
             .padding(horizontal = 8.dp)
     ) {
-        val clockOutInteraction = remember { MutableInteractionSource() }
-        val pressSquash = rememberPressSquash(clockOutInteraction, reducedMotion)
-
         ScaledFilledTonalButton(
             onClick = onBreakToggle,
             shape = CircleShape,
@@ -379,10 +374,7 @@ private fun ActiveShiftStage(
             ),
             modifier = Modifier
                 .height(48.dp)
-                .graphicsLayer {
-                    scaleX = pressSquash.value * statePulse.value
-                    scaleY = scaleX
-                }
+                .drawScaled(statePulse)
         ) {
             Icon(
                 imageVector = Icons.Rounded.Stop,
@@ -415,10 +407,9 @@ private fun ReadyStage(
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    // The clock-in cookie. It is painted straight onto a Canvas (a scalloped disc path) instead of
-    // being a Surface clipped to a Shape: on this device both the library cookie shape and the
-    // app's own CookieShape came out clipped to a flat-bottomed sliver that hid the play icon, so
-    // nothing here depends on an outline clip. Dips slightly while held (expressiveClickable) and on state change.
+    // The clock-in cookie: a scalloped disc painted behind the icon and label. Dips slightly while
+    // held (expressiveClickable) and on state change (drawScaled - never a graphicsLayer here, see
+    // drawScaled for why).
     val cookieColor = MaterialTheme.colorScheme.primary
     val onCookie = MaterialTheme.colorScheme.onPrimary
 
@@ -426,10 +417,7 @@ private fun ReadyStage(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .size(156.dp)
-            .graphicsLayer {
-                scaleX = statePulse.value
-                scaleY = scaleX
-            }
+            .drawScaled(statePulse)
             .drawBehind { drawPath(scallopedDisc(size.minDimension), cookieColor) }
             .clip(CircleShape)
             .expressiveClickable(onClick = onClockToggle)

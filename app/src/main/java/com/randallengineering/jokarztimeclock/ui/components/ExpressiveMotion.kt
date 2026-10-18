@@ -29,6 +29,8 @@ import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -83,7 +85,7 @@ fun LaunchedChangeEffect(key: Any?, block: suspend CoroutineScope.() -> Unit) {
 /**
  * A scale that dips smoothly to [AppMotion.PULSE_SQUASH] and eases back to exactly 1 each time [key]
  * changes (e.g. the shift state). It starts from 1 (no snap) and never passes 1 on the way back (no
- * bounce): the curve is [AppMotion.pulseScaleAt]. Read it inside `graphicsLayer {}` so it only redraws.
+ * bounce): the curve is [AppMotion.pulseScaleAt]. Apply it with [drawScaled] so it only redraws.
  */
 @Composable
 fun rememberStatePulse(key: Any?, reducedMotion: Boolean): State<Float> {
@@ -94,6 +96,19 @@ fun rememberStatePulse(key: Any?, reducedMotion: Boolean): State<Float> {
         progress.animateTo(1f, tween(AppMotion.PULSE_MS, easing = LinearEasing))
     }
     return remember { derivedStateOf { AppMotion.pulseScaleAt(progress.value) } }
+}
+
+/**
+ * Draws this node scaled by [factor] about its centre, as a draw-time transform.
+ *
+ * Use this, not `graphicsLayer { scaleX = ... }`, for the state pulse. A layer whose block only reads
+ * a state that rarely changes keeps the size it had on the screen's first, transient layout pass:
+ * on app open the hero's clock-in button was recorded at 388x96 px, so only a flat-bottomed sliver
+ * of it was ever drawn (no icon, no label) until a tap forced a redraw. See ScreenRenderTest.
+ */
+fun Modifier.drawScaled(factor: State<Float>): Modifier = drawWithContent {
+    val s = factor.value
+    if (s == 1f) drawContent() else scale(s) { this@drawWithContent.drawContent() }
 }
 
 /**

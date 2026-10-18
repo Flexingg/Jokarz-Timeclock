@@ -80,8 +80,8 @@ object WidgetUpdater {
             views.setTextViewText(R.id.widget_action, "Clock Out")
             views.setInt(R.id.widget_action_row, "setBackgroundResource", R.drawable.widget_button_stop)
             views.setTextColor(R.id.widget_action, 0xFF690005.toInt())
-            views.setImageViewResource(R.id.widget_action_icon, R.drawable.ic_widget_stop)
-            views.setInt(R.id.widget_action_icon, "setColorFilter", 0xFF690005.toInt())
+            // Text only: next to the break button there is no room for an icon on a 2-cell widget.
+            views.setViewVisibility(R.id.widget_action_icon, View.GONE)
 
             // Break toggle: pause while working, play while on break.
             views.setViewVisibility(R.id.widget_break_row, View.VISIBLE)
@@ -101,6 +101,7 @@ object WidgetUpdater {
             views.setTextViewText(R.id.widget_action, "Clock In")
             views.setInt(R.id.widget_action_row, "setBackgroundResource", R.drawable.widget_button_play)
             views.setTextColor(R.id.widget_action, 0xFF4A0A6B.toInt())
+            views.setViewVisibility(R.id.widget_action_icon, View.VISIBLE)
             views.setImageViewResource(R.id.widget_action_icon, R.drawable.ic_widget_play)
             views.setInt(R.id.widget_action_icon, "setColorFilter", 0xFF4A0A6B.toInt())
         }

@@ -87,10 +87,10 @@ class ExpressiveButtonSizeTest {
     @Test
     fun shapeTokensMatchTheBrief() {
         val box = Size(300f, 200f)
-        assertEquals(20f, AppShapes.medium.topStart.toPx(box, density), 0f)
-        assertEquals(28f, AppShapes.extraLarge.topStart.toPx(box, density), 0f)
-        assertEquals(CardCornerRadius, 20.dp)
-        assertEquals(DialogCornerRadius, 28.dp)
+        assertEquals(24f, AppShapes.medium.topStart.toPx(box, density), 0f)
+        assertEquals(32f, AppShapes.extraLarge.topStart.toPx(box, density), 0f)
+        assertEquals(CardCornerRadius, 24.dp)
+        assertEquals(DialogCornerRadius, 32.dp)
         // Pill at any height.
         listOf(24f, 40f, 56f, 136f).forEach { h ->
             assertEquals(h / 2f, PillShape.topStart.toPx(Size(500f, h), density), 1e-4f)

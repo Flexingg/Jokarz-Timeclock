@@ -13,23 +13,23 @@ import androidx.compose.ui.unit.dp
  * button sizes. Pure values (no composables), so ExpressiveButtonSizeTest checks the table on the JVM.
  */
 
-/** Corner radius of every card (list rows, summary cards, grouped containers). */
-val CardCornerRadius: Dp = 20.dp
+/** Corner radius of every card (summary cards, grouped containers): FluidRadius.lg. */
+val CardCornerRadius: Dp = FluidRadius.lg
 
-/** Corner radius of every dialog (M3 dialogs read `shapes.extraLarge`). */
-val DialogCornerRadius: Dp = 28.dp
+/** Corner radius of every dialog (M3 dialogs read `shapes.extraLarge`): FluidRadius.xl. */
+val DialogCornerRadius: Dp = FluidRadius.xl
 
 /** A fully rounded pill at any height: 50 % of the shorter side. */
 val PillShape = RoundedCornerShape(percent = 50)
 
 /**
- * The theme's shape scale. M3 components read these slots: cards use `medium` (20 dp), dialogs and
- * date/time pickers use `extraLarge` (28 dp). Buttons are pill-shaped by default in M3 (`CircleShape`)
+ * The theme's shape scale. M3 components read these slots: cards use `medium` (24 dp), list rows `small`
+ * (16 dp), dialogs and date/time pickers use `extraLarge` (32 dp) - the Fluid corner family. Buttons are pill-shaped by default in M3 (`CircleShape`)
  * and [ExpressiveButtonSize.shape] keeps that true at every explicit height.
  */
 val AppShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(12.dp),
+    small = RoundedCornerShape(FluidRadius.md),
     medium = RoundedCornerShape(CardCornerRadius),
     large = RoundedCornerShape(24.dp),
     extraLarge = RoundedCornerShape(DialogCornerRadius)

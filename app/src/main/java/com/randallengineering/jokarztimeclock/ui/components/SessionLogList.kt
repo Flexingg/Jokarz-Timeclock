@@ -30,6 +30,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDateRangePickerState
@@ -178,6 +179,13 @@ fun GoogleSessionLogList(
             },
             shape = PillShape,
             textStyle = MaterialTheme.typography.bodyMedium,
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedContainerColor = fluidCardColor(),
+                focusedContainerColor = fluidCardColor(),
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                // Focus is signalled by an accent contour glow.
+                focusedBorderColor = MaterialTheme.colorScheme.primary
+            ),
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -209,6 +217,20 @@ fun GoogleSessionLogList(
                         { Icon(Icons.Rounded.DateRange, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
                     } else null,
                     shape = PillShape,
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = fluidCardColor(),
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                        selectedLabelColor = MaterialTheme.colorScheme.primary,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.primary
+                    ),
+                    // Unselected: a faint contour; selected: an accent contour glow.
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = selected,
+                        borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        selectedBorderWidth = 1.dp
+                    ),
                     interactionSource = interaction,
                     modifier = pressScale
                 )
@@ -249,12 +271,12 @@ private fun ShiftRow(session: Session, onClick: () -> Unit) {
     val dEnd = Date(session.end)
 
     Surface(
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 1.dp,
+        shape = MaterialTheme.shapes.small,
+        color = fluidCardColor(),
+        border = fluidContour(),
         modifier = Modifier
             .fillMaxWidth()
-            .expressiveClickable(onClick = onClick)
+            .expressiveClickable(shape = MaterialTheme.shapes.small, onClick = onClick)
     ) {
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -345,7 +367,8 @@ private fun EmptyHistory(
 ) {
     Surface(
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = fluidCardColor(),
+        border = fluidContour(),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)

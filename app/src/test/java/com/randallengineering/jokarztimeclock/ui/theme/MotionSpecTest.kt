@@ -19,9 +19,16 @@ class MotionSpecTest {
     fun everyStateChangeActuallyMovesTheStage() {
         val poses = StagePose.values()
         for (a in poses) for (b in poses) if (a != b) {
-            val same = a.topStart == b.topStart && a.topEnd == b.topEnd &&
-                a.bottomEnd == b.bottomEnd && a.bottomStart == b.bottomStart && a.waveAmplitude == b.waveAmplitude
+            val same = a.glowAlpha == b.glowAlpha && a.glowRadius == b.glowRadius && a.glowCenterY == b.glowCenterY
             assertTrue("$a and $b are indistinguishable", !same)
+        }
+    }
+
+    @Test
+    fun stageLightStaysSubtle() {
+        for (p in StagePose.values()) {
+            assertTrue("$p glow too strong for text on the stage", p.glowAlpha in 0.05f..0.4f)
+            assertTrue(p.glowCenterY in 0f..1f && p.glowRadius > 0f)
         }
     }
 

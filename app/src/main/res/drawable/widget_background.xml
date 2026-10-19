@@ -1,12 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <gradient
-        android:angle="315"
-        android:endColor="#FF1F1626"
-        android:startColor="#FF3F2A50"
-        android:type="linear" />
-    <stroke
-        android:width="1dp"
-        android:color="#33EBB2FF" />
-    <corners android:radius="28dp" />
-</shape>
+<!-- Frosted glass card: a luminous 1 dp contour (bright at the top, fading down), a translucent
+     dark fill that lets the wallpaper through, and a soft accent glow in the top corner. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#52FFFFFF" android:endColor="#0FFFFFFF" />
+            <corners android:radius="24dp" />
+        </shape>
+    </item>
+    <item android:bottom="1dp" android:left="1dp" android:right="1dp" android:top="1dp">
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#C72A2333" android:endColor="#D9121016" />
+            <corners android:radius="23dp" />
+        </shape>
+    </item>
+    <item android:bottom="1dp" android:left="1dp" android:right="1dp" android:top="1dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:centerX="0.18"
+                android:centerY="0.0"
+                android:endColor="#00B57CFF"
+                android:gradientRadius="180dp"
+                android:startColor="#47B57CFF"
+                android:type="radial" />
+            <corners android:radius="23dp" />
+        </shape>
+    </item>
+</layer-list>

@@ -105,8 +105,10 @@ private fun ChipDiagnostics(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+            containerColor = fluidCardColor(),
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
+        border = fluidContour(),
         shape = MaterialTheme.shapes.medium
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -163,9 +165,13 @@ private fun HealthWarnings(
 
     Card(
         modifier = modifier.fillMaxWidth(),
+        // A calm card with an error-coloured contour: the warning is signalled by light, not a
+        // full red fill, so the body copy stays readable in every palette.
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f)
+            containerColor = fluidCardColor(),
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.55f)),
         shape = MaterialTheme.shapes.medium
     ) {
         Column(modifier = Modifier.padding(14.dp)) {

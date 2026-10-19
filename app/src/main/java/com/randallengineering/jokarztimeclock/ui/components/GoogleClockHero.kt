@@ -12,6 +12,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Path
@@ -59,7 +67,8 @@ import com.randallengineering.jokarztimeclock.ui.theme.AppMotion
 import com.randallengineering.jokarztimeclock.ui.theme.ShiftRing
 import com.randallengineering.jokarztimeclock.ui.theme.StagePose
 import com.randallengineering.jokarztimeclock.ui.theme.TimerDisplayStyle
-import com.randallengineering.jokarztimeclock.ui.theme.WavyTopShape
+import com.randallengineering.jokarztimeclock.ui.theme.FluidLight
+import com.randallengineering.jokarztimeclock.ui.theme.FluidRadius
 import java.util.Calendar
 import kotlin.math.PI
 import kotlin.math.abs
@@ -86,29 +95,40 @@ fun GoogleClockHero(
     val reducedMotion = rememberReducedMotion()
 
     val pose = StagePose.of(isClockedIn, state.isOnBreak)
-    // Smooth settle, never past the new pose (the owner asked for no bounce; see ThemeMotionTest).
+    // Light as signal: the stage's glow re-colours and re-sizes with the shift state, easing into its
+    // new pose without overshoot (the owner asked for no bounce; see ThemeMotionTest).
     val sizeSpec = AppMotion.stageSpec<IntSize>()
     val poseSpec: AnimationSpec<Float> = if (reducedMotion) snap() else AppMotion.stageSpec()
-    val topStart by animateFloatAsState(pose.topStart, poseSpec, label = "stageTopStart")
-    val topEnd by animateFloatAsState(pose.topEnd, poseSpec, label = "stageTopEnd")
-    val bottomEnd by animateFloatAsState(pose.bottomEnd, poseSpec, label = "stageBottomEnd")
-    val bottomStart by animateFloatAsState(pose.bottomStart, poseSpec, label = "stageBottomStart")
-    val wave by animateFloatAsState(pose.waveAmplitude, poseSpec, label = "stageWave")
+    val scheme = MaterialTheme.colorScheme
+    val glowTarget = when (pose) {
+        StagePose.READY -> scheme.primary
+        StagePose.WORKING -> scheme.primary
+        StagePose.BREAK -> scheme.secondary
+    }
+    val glowColor by animateColorAsState(glowTarget, if (reducedMotion) snap() else AppMotion.stageSpec(), label = "stageGlow")
+    val glowAlpha by animateFloatAsState(pose.glowAlpha * if (scheme.isDark()) FluidLight.DARK_GLOW_FACTOR else 1f, poseSpec, label = "stageGlowAlpha")
+    val glowCenter by animateFloatAsState(pose.glowCenterY, poseSpec, label = "stageGlowCenter")
 
     // Clocking in or out dips the primary action slightly; it eases back to full size (no bounce).
     val statePulse = rememberStatePulse(isClockedIn, reducedMotion)
 
     Surface(
-        shape = WavyTopShape(
-            waveAmplitude = wave.dp,
-            topStart = topStart.dp,
-            topEnd = topEnd.dp,
-            bottomEnd = bottomEnd.dp,
-            bottomStart = bottomStart.dp
-        ),
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+        shape = RoundedCornerShape(FluidRadius.xl),
+        color = fluidCardColor(),
+        border = fluidContour(),
         modifier = modifier.fillMaxWidth()
     ) {
+        Box(
+            modifier = Modifier.drawBehind {
+                drawRect(
+                    Brush.radialGradient(
+                        listOf(glowColor.copy(alpha = glowAlpha), glowColor.copy(alpha = 0f)),
+                        center = Offset(size.width / 2f, size.height * glowCenter),
+                        radius = size.width * pose.glowRadius
+                    )
+                )
+            }
+        ) {
         AnimatedContent(
             targetState = isClockedIn,
             transitionSpec = {
@@ -147,6 +167,7 @@ fun GoogleClockHero(
                     )
                 }
             }
+        }
         }
     }
 }
@@ -187,22 +208,16 @@ private fun ActiveShiftStage(
         contentAlignment = Alignment.Center,
         modifier = Modifier.size(264.dp)
     ) {
-        // A clean, smooth circular arc with rounded caps matching Google Clock styling.
-        CircularProgressIndicator(
-            progress = { progress },
-            color = ringColor,
-            trackColor = plateColor,
-            strokeWidth = 12.dp,
-            strokeCap = StrokeCap.Round,
-            gapSize = 0.dp,
-            modifier = Modifier.size(256.dp)
-        )
+        // A luminous progress ring: a soft track, an arc that brightens toward its head, and a
+        // "comet" glow riding the leading edge (light as the progress signal).
+        LuminousRing(progress = progress, color = ringColor, modifier = Modifier.size(256.dp))
 
         // A plain circle, not a decorative outline, so nothing competes with the digits.
         Box(
             modifier = Modifier
                 .size(224.dp)
                 .background(plateColor, CircleShape)
+                .border(fluidContour(), CircleShape)
         )
 
         // Center Digital Counter
@@ -257,8 +272,8 @@ private fun ActiveShiftStage(
 
     Surface(
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+        border = fluidContour(),
         modifier = Modifier.padding(horizontal = 8.dp)
     ) {
         Row(
@@ -350,7 +365,8 @@ private fun ActiveShiftStage(
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             },
-            modifier = Modifier.height(48.dp)
+            border = fluidContour(),
+            modifier = Modifier.height(52.dp)
         ) {
             Icon(
                 imageVector = if (state.isOnBreak) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
@@ -372,8 +388,9 @@ private fun ActiveShiftStage(
                 containerColor = MaterialTheme.colorScheme.error,
                 contentColor = MaterialTheme.colorScheme.onError
             ),
+            border = fluidContour(),
             modifier = Modifier
-                .height(48.dp)
+                .height(52.dp)
                 .drawScaled(statePulse)
         ) {
             Icon(
@@ -407,20 +424,45 @@ private fun ReadyStage(
 
     Spacer(modifier = Modifier.height(20.dp))
 
-    // The clock-in cookie: a scalloped disc painted behind the icon and label. Dips slightly while
-    // held (expressiveClickable) and on state change (drawScaled - never a graphicsLayer here, see
-    // drawScaled for why).
-    val cookieColor = MaterialTheme.colorScheme.primary
-    val onCookie = MaterialTheme.colorScheme.onPrimary
+    // The clock-in orb: a lit sphere of the primary colour with a soft halo, a highlight from above
+    // and a contour edge; it compresses under the finger and a glow follows the touch
+    // (expressiveClickable). The state pulse is a draw-time scale (drawScaled - never a
+    // graphicsLayer here, see drawScaled for why).
+    val orb = MaterialTheme.colorScheme.primary
+    val onOrb = MaterialTheme.colorScheme.onPrimary
+    val haloAlpha = if (MaterialTheme.colorScheme.isDark()) 0.42f else 0.30f
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .size(156.dp)
+            .size(160.dp)
             .drawScaled(statePulse)
-            .drawBehind { drawPath(scallopedDisc(size.minDimension), cookieColor) }
+            .drawBehind {
+                val r = size.minDimension / 2f
+                drawCircle(
+                    Brush.radialGradient(
+                        0.55f to orb.copy(alpha = haloAlpha), 1f to orb.copy(alpha = 0f),
+                        center = center, radius = r * 1.45f
+                    ),
+                    radius = r * 1.45f
+                )
+                drawCircle(orb, radius = r)
+                drawCircle(
+                    Brush.radialGradient(
+                        listOf(onOrb.copy(alpha = 0.30f), onOrb.copy(alpha = 0f)),
+                        center = Offset(center.x, center.y - r * 0.55f),
+                        radius = r * 0.9f
+                    ),
+                    radius = r
+                )
+                drawCircle(
+                    Brush.verticalGradient(listOf(onOrb.copy(alpha = 0.45f), onOrb.copy(alpha = 0.05f))),
+                    radius = r - 0.5.dp.toPx(),
+                    style = Stroke(width = 1.dp.toPx())
+                )
+            }
             .clip(CircleShape)
-            .expressiveClickable(onClick = onClockToggle)
+            .expressiveClickable(shape = CircleShape, onClick = onClockToggle)
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -429,21 +471,19 @@ private fun ReadyStage(
             Icon(
                 imageVector = Icons.Rounded.PlayArrow,
                 contentDescription = "Clock In",
-                tint = onCookie,
-                modifier = Modifier.size(48.dp)
+                tint = onOrb,
+                modifier = Modifier.size(52.dp)
             )
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "CLOCK IN",
-                color = onCookie,
+                text = "Clock In",
+                color = onOrb,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+                fontWeight = FontWeight.SemiBold
             )
         }
     }
 
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(22.dp))
 
     Text(
         text = "Tap to begin tracking today's hours",
@@ -452,18 +492,41 @@ private fun ReadyStage(
     )
 }
 
-/** A 9-lobed scalloped disc filling a square of [diameter] px, as a closed polyline path. */
-private fun scallopedDisc(diameter: Float): Path {
-    val radius = diameter / 2f
-    val steps = 240
-    return Path().apply {
-        for (i in 0..steps) {
-            val phi = 2.0 * PI * i / steps
-            val r = radius * (1.0 - 0.06 * (1.0 - cos(9.0 * phi)) / 2.0).toFloat()
-            val x = radius + r * sin(phi).toFloat()
-            val y = radius - r * cos(phi).toFloat()
-            if (i == 0) moveTo(x, y) else lineTo(x, y)
+/**
+ * The active shift's progress ring: a faint full-circle track, a progress arc whose colour gathers
+ * toward its head, and a soft "comet" glow with a bright core on the leading edge.
+ */
+@Composable
+private fun LuminousRing(progress: Float, color: Color, modifier: Modifier = Modifier) {
+    val s = MaterialTheme.colorScheme
+    val track = if (s.isDark()) s.onSurface.copy(alpha = 0.08f) else s.outlineVariant.copy(alpha = 0.55f)
+    val core = if (s.isDark()) s.onSurface else s.surfaceContainerLowest
+    Canvas(modifier = modifier) {
+        val stroke = 12.dp.toPx()
+        val r = (size.minDimension - stroke) / 2f
+        val topLeft = Offset(center.x - r, center.y - r)
+        val arcSize = Size(r * 2f, r * 2f)
+        drawCircle(track, radius = r, style = Stroke(stroke))
+        val p = progress.coerceIn(0f, 1f)
+        if (p <= 0f) return@Canvas
+        rotate(-90f) {
+            drawArc(
+                brush = Brush.sweepGradient(0f to color.copy(alpha = 0.35f), p to color, 1f to color, center = center),
+                startAngle = 0f,
+                sweepAngle = 360f * p,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(stroke, cap = StrokeCap.Round)
+            )
         }
-        close()
+        val angle = Math.toRadians(360.0 * p - 90.0)
+        val head = Offset(center.x + r * cos(angle).toFloat(), center.y + r * sin(angle).toFloat())
+        drawCircle(
+            Brush.radialGradient(listOf(color.copy(alpha = 0.55f), color.copy(alpha = 0f)), center = head, radius = stroke * 2.2f),
+            radius = stroke * 2.2f,
+            center = head
+        )
+        drawCircle(core.copy(alpha = 0.9f), radius = stroke * 0.28f, center = head)
     }
 }

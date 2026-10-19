@@ -43,8 +43,8 @@ android {
         applicationId = "com.randallengineering.jokarztimeclock"
         minSdk = 26
         targetSdk = 36
-        versionCode = 21
-        versionName = "2.9.5"
+        versionCode = 22
+        versionName = "2.10.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -125,6 +125,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.google.code.gson:gson:2.11.0")
+    // Backdrop blur for the Fluid glass surfaces (top bar, floating island). 1.1.x matches this
+    // project's Kotlin 2.0 / Compose 1.7; below Android 12 it falls back to a translucent scrim.
+    implementation("dev.chrisbanes.haze:haze:1.1.1")
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
     testImplementation("junit:junit:4.13.2")

@@ -39,8 +39,8 @@ fun GoogleSummaryCards(
         // Today Summary Card (Google Tonal Container)
         Surface(
             shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-            tonalElevation = 2.dp,
+            color = fluidCardColor(),
+            border = fluidContour(),
             modifier = Modifier.weight(1f)
         ) {
             Column(
@@ -127,8 +127,8 @@ fun GoogleSummaryCards(
 
         Surface(
             shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-            tonalElevation = 2.dp,
+            color = fluidCardColor(),
+            border = fluidContour(),
             modifier = Modifier.weight(1f)
         ) {
             Column(

@@ -17,7 +17,7 @@ import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
+import com.randallengineering.jokarztimeclock.ui.components.FluidSwitch
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -236,7 +236,7 @@ fun EditSessionDialog(
                             Text("Entered into Payroll System", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                             Text("Check when overtime has been submitted", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Checkbox(checked = isPutInSystem, onCheckedChange = { isPutInSystem = it })
+                        FluidSwitch(checked = isPutInSystem, onCheckedChange = { isPutInSystem = it })
                     }
                 }
             }

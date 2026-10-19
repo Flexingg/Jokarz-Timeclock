@@ -4,6 +4,10 @@ import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Brush
@@ -291,6 +295,8 @@ fun GoogleTimeclockScreen(
     // The Living Flow shell: content runs edge to edge as the blur source, under a frosted top bar
     // and above a floating island; the page carries a soft primary-coloured wash.
     val hazeState = remember { HazeState() }
+    // Edge-to-edge (enforced on Android 15+): the top bar must sit BELOW the phone's status bar.
+    val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     CompositionLocalProvider(LocalFluid provides LocalFluid.current.copy(hazeState = hazeState)) {
         Box(modifier = Modifier.fillMaxSize()) {
             Box(
@@ -305,18 +311,7 @@ fun GoogleTimeclockScreen(
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp)
                 ) {
-                    Spacer(modifier = Modifier.height(TOP_BAR_HEIGHT))
-
-                    // Always visible, straight from BuildConfig, so the owner can see which build is installed.
-                    Text(
-                        text = AppVersion.label,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(TOP_BAR_HEIGHT + topInset))
 
                     // Gross / Take Home + hourly rate capsule
                     FluidCard(shape = PillShape, modifier = Modifier.fillMaxWidth()) {
@@ -474,6 +469,7 @@ fun GoogleTimeclockScreen(
             }
 
             FluidTopBar(
+                topInset = topInset,
                 pendingOtCount = pendingOtCount,
                 moneyHidden = state.settings.hideMoneyAmounts,
                 onOvertime = {
@@ -683,6 +679,7 @@ private val TOP_BAR_HEIGHT = 72.dp
  */
 @Composable
 private fun FluidTopBar(
+    topInset: Dp,
     pendingOtCount: Int,
     moneyHidden: Boolean,
     onOvertime: () -> Unit,
@@ -704,9 +701,9 @@ private fun FluidTopBar(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .fillMaxWidth()
-            .height(TOP_BAR_HEIGHT)
+            .height(TOP_BAR_HEIGHT + topInset)
             .then(backdrop)
-            .padding(horizontal = 16.dp)
+            .padding(top = topInset, start = 16.dp, end = 16.dp)
     ) {
         Box(
             contentAlignment = Alignment.Center,

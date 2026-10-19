@@ -4,6 +4,12 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
@@ -82,6 +88,33 @@ class ScreenRenderTest {
         }
     }
 
+    /**
+     * Dialogs are separate windows that Robolectric cannot draw, so this renders the dialog's
+     * styled parts (glass container + contour, title, pill switches, text field, buttons) on the
+     * page, with the same tokens ExpressiveAlertDialog uses.
+     */
+    @Test
+    fun renderDialogLook() {
+        for (theme in listOf(ThemeMode.AMOLED, ThemeMode.LIGHT)) {
+            launch(theme).use { scenario ->
+                compose.waitForIdle()
+                scenario.onActivity { activity ->
+                    val root = activity.window.decorView as android.view.ViewGroup
+                    val host = androidx.compose.ui.platform.ComposeView(activity).apply {
+                        setContent {
+                            com.randallengineering.jokarztimeclock.ui.theme.JokarzTimeclockTheme(themeMode = theme, reduceTransparency = true) {
+                                DialogLookPreview()
+                            }
+                        }
+                    }
+                    root.addView(host, android.view.ViewGroup.LayoutParams(-1, -1))
+                }
+                compose.waitForIdle()
+                render(scenario, "dialog-look-${theme.name.lowercase()}")
+            }
+        }
+    }
+
     /** The whole page in one frame (a very tall window), for reviewing the cards below the fold. */
     @Test
     fun renderFullPage() {
@@ -105,5 +138,44 @@ class ScreenRenderTest {
         File("build/screen-render").apply { mkdirs() }.resolve("$name.png")
             .outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
         return bmp
+    }
+}
+
+
+@androidx.compose.runtime.Composable
+private fun DialogLookPreview() {
+    val s = androidx.compose.material3.MaterialTheme.colorScheme
+    androidx.compose.foundation.layout.Box(
+        contentAlignment = androidx.compose.ui.Alignment.Center,
+        modifier = androidx.compose.ui.Modifier.fillMaxSize().background(s.scrim.copy(alpha = 0.55f))
+    ) {
+        androidx.compose.material3.Surface(
+            shape = androidx.compose.material3.MaterialTheme.shapes.extraLarge,
+            color = fluidGlassFill(com.randallengineering.jokarztimeclock.ui.theme.FluidGlass.thick),
+            border = fluidContour(),
+            modifier = androidx.compose.ui.Modifier.padding(24.dp)
+        ) {
+            androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.padding(24.dp)) {
+                androidx.compose.material3.Text("App Settings & Geofence", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+                androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(16.dp))
+                for ((label, on) in listOf("Privacy Mode (Hide Dollar Amounts)" to true, "Haptic Vibration Feedback" to false)) {
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+                        modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                    ) {
+                        androidx.compose.material3.Text(label, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+                        FluidSwitch(checked = on, onCheckedChange = {})
+                    }
+                }
+                androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(12.dp))
+                androidx.compose.material3.OutlinedTextField(value = "10.0", onValueChange = {}, label = { androidx.compose.material3.Text("Standard shift hours") }, modifier = androidx.compose.ui.Modifier.fillMaxWidth())
+                androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(20.dp))
+                androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp), modifier = androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.End)) {
+                    ScaledTextButton(onClick = {}) { androidx.compose.material3.Text("Cancel") }
+                    ScaledButton(onClick = {}) { androidx.compose.material3.Text("Save") }
+                }
+            }
+        }
     }
 }

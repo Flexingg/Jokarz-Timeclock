@@ -387,3 +387,25 @@ fun FluidIconButton(
         }
     }
 }
+
+/**
+ * A pill switch (track 52 x 32): the thumb glides across and the ON track is the accent colour, the
+ * OFF track a recessed neutral with a faint contour. Replaces checkboxes for on/off settings.
+ */
+@Composable
+fun FluidSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, modifier: Modifier = Modifier) {
+    val s = MaterialTheme.colorScheme
+    androidx.compose.material3.Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier,
+        colors = androidx.compose.material3.SwitchDefaults.colors(
+            checkedThumbColor = s.onPrimary,
+            checkedTrackColor = s.primary,
+            checkedBorderColor = s.primary,
+            uncheckedThumbColor = s.onSurfaceVariant,
+            uncheckedTrackColor = s.onSurface.copy(alpha = 0.08f),
+            uncheckedBorderColor = s.outlineVariant
+        )
+    )
+}

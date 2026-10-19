@@ -28,7 +28,8 @@ val PillShape = RoundedCornerShape(percent = 50)
  * and [ExpressiveButtonSize.shape] keeps that true at every explicit height.
  */
 val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
+    // extraSmall is what M3 text fields and menus read: the Fluid md radius keeps them in the family.
+    extraSmall = RoundedCornerShape(FluidRadius.md),
     small = RoundedCornerShape(FluidRadius.md),
     medium = RoundedCornerShape(CardCornerRadius),
     large = RoundedCornerShape(24.dp),

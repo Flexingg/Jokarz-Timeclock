@@ -4,7 +4,9 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -102,8 +104,9 @@ fun ExpressiveAlertDialog(
         shape = MaterialTheme.shapes.extraLarge,
         // Thick frosted glass over a blurred screen (DialogBackdropBlur); opaque when glass is off.
         containerColor = fluidGlassFill(FluidGlass.thick),
+        tonalElevation = 0.dp,
         properties = properties,
-        modifier = modifier.graphicsLayer {
+        modifier = modifier.border(fluidContour(), MaterialTheme.shapes.extraLarge).graphicsLayer {
             val p = progress.value
             alpha = DialogMotion.alphaAt(p)
             scaleX = DialogMotion.scaleAt(p)
@@ -118,7 +121,7 @@ fun ExpressiveAlertDialog(
  * when the device has cross-window blur disabled (battery saver, some ROMs): the scrim then dims as usual.
  */
 @Composable
-private fun DialogBackdropBlur() {
+fun DialogBackdropBlur() {
     val glass = LocalFluid.current.glass
     val window = (LocalView.current.parent as? DialogWindowProvider)?.window ?: return
     SideEffect {

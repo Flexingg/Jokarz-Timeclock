@@ -34,9 +34,13 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DatePickerDefaults
+import com.randallengineering.jokarztimeclock.ui.components.FluidSwitch
+import com.randallengineering.jokarztimeclock.ui.components.DialogBackdropBlur
+import com.randallengineering.jokarztimeclock.ui.components.fluidGlassFill
+import com.randallengineering.jokarztimeclock.ui.theme.FluidGlass
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -158,6 +162,8 @@ fun MaterialDatePickerDialog(
 
     DatePickerDialog(
         onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = DatePickerDefaults.colors(containerColor = fluidGlassFill(FluidGlass.thick)),
         confirmButton = {
             ScaledButton(onClick = {
                 dateState.selectedDateMillis?.let { onConfirm(it) }
@@ -169,6 +175,7 @@ fun MaterialDatePickerDialog(
             DialogBackButton(onClick = onDismiss)
         }
     ) {
+        DialogBackdropBlur()
         DatePicker(state = dateState)
     }
 }
@@ -331,7 +338,7 @@ fun AddManualShiftDialog(
                             Text("Entered into Payroll System", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
                             Text("Check if overtime already submitted", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Checkbox(checked = isPutInSystem, onCheckedChange = { isPutInSystem = it })
+                        FluidSwitch(checked = isPutInSystem, onCheckedChange = { isPutInSystem = it })
                     }
                 }
             }
@@ -605,7 +612,7 @@ fun SettingsDialog(
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text("Auto Clock In/Out with Geofence", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                    Checkbox(checked = geofenceEnabled, onCheckedChange = { geofenceEnabled = it })
+                    FluidSwitch(checked = geofenceEnabled, onCheckedChange = { geofenceEnabled = it })
                 }
 
                 if (geofenceEnabled) {
@@ -697,7 +704,7 @@ fun SettingsDialog(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Checkbox(checked = useTaskerFallback, onCheckedChange = { useTaskerFallback = it })
+                        FluidSwitch(checked = useTaskerFallback, onCheckedChange = { useTaskerFallback = it })
                     }
 
                     if (useTaskerFallback) {
@@ -796,7 +803,7 @@ fun SettingsDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Checkbox(
+                    FluidSwitch(
                         checked = runTaskerTask,
                         onCheckedChange = { checked ->
                             runTaskerTask = checked
@@ -920,27 +927,27 @@ fun SettingsDialog(
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text("Privacy Mode (Hide Dollar Amounts)", style = MaterialTheme.typography.bodySmall)
-                    Checkbox(checked = hideMoneyAmounts, onCheckedChange = { hideMoneyAmounts = it })
+                    FluidSwitch(checked = hideMoneyAmounts, onCheckedChange = { hideMoneyAmounts = it })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text("Live Ongoing Notification (Android Bar)", style = MaterialTheme.typography.bodySmall)
-                    Checkbox(checked = liveNotificationEnabled, onCheckedChange = { liveNotificationEnabled = it })
+                    FluidSwitch(checked = liveNotificationEnabled, onCheckedChange = { liveNotificationEnabled = it })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text("Sound Chimes & Clicks", style = MaterialTheme.typography.bodySmall)
-                    Checkbox(checked = soundEnabled, onCheckedChange = { soundEnabled = it })
+                    FluidSwitch(checked = soundEnabled, onCheckedChange = { soundEnabled = it })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text("Haptic Vibration Feedback", style = MaterialTheme.typography.bodySmall)
-                    Checkbox(checked = hapticEnabled, onCheckedChange = { hapticEnabled = it })
+                    FluidSwitch(checked = hapticEnabled, onCheckedChange = { hapticEnabled = it })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text("Reduce Transparency (solid, no glass blur)", style = MaterialTheme.typography.bodySmall)
-                    Checkbox(checked = reduceTransparency, onCheckedChange = { reduceTransparency = it })
+                    FluidSwitch(checked = reduceTransparency, onCheckedChange = { reduceTransparency = it })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text("Shift Milestone Notifications", style = MaterialTheme.typography.bodySmall)
-                    Checkbox(checked = notificationsEnabled, onCheckedChange = { notificationsEnabled = it })
+                    FluidSwitch(checked = notificationsEnabled, onCheckedChange = { notificationsEnabled = it })
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -976,7 +983,7 @@ fun SettingsDialog(
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text("Auto-Deduct 30m Meal After 4h", style = MaterialTheme.typography.bodySmall)
-                    Checkbox(checked = autoBreak, onCheckedChange = { autoBreak = it })
+                    FluidSwitch(checked = autoBreak, onCheckedChange = { autoBreak = it })
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -1032,12 +1039,6 @@ fun SettingsDialog(
                     Text("Choose CSV file", style = MaterialTheme.typography.bodySmall)
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    com.randallengineering.jokarztimeclock.AppVersion.label,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         },
         confirmButton = {

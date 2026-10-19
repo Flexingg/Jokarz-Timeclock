@@ -61,25 +61,24 @@ internal object AppMotion {
 
 
 /**
- * The hero stage's geometry per shift state, in dp. Changing state eases between poses on
- * [AppMotion.stageSpec] (no overshoot), so the stage visibly settles into its new shape when the
- * owner clocks in, pauses or leaves. Corners are logical (start/end) and mirror under RTL.
+ * The hero stage's light per shift state ("light as signal"): how strong its glow is, how far it
+ * spreads and where it sits (fraction of the stage height). Changing state eases between poses on
+ * [AppMotion.stageSpec] (no overshoot), so the stage visibly re-lights when the owner clocks in,
+ * pauses or leaves. The glow's colour comes from the scheme (primary, or secondary on break).
  */
 internal enum class StagePose(
-    val topStart: Float,
-    val topEnd: Float,
-    val bottomEnd: Float,
-    val bottomStart: Float,
-    val waveAmplitude: Float
+    val glowAlpha: Float,
+    val glowRadius: Float,
+    val glowCenterY: Float
 ) {
-    /** Clocked out: lopsided and playful, the deepest wave. */
-    READY(topStart = 44f, topEnd = 16f, bottomEnd = 44f, bottomStart = 16f, waveAmplitude = 12f),
+    /** Clocked out: a warm pool of light under the clock-in orb. */
+    READY(glowAlpha = 0.34f, glowRadius = 0.62f, glowCenterY = 0.46f),
 
-    /** On the clock: calm and even so nothing competes with the timer. */
-    WORKING(topStart = 32f, topEnd = 32f, bottomEnd = 32f, bottomStart = 32f, waveAmplitude = 6f),
+    /** On the clock: a wider, calmer light behind the ring so nothing competes with the timer. */
+    WORKING(glowAlpha = 0.28f, glowRadius = 0.78f, glowCenterY = 0.40f),
 
-    /** On break: the lopsidedness flips the other way. */
-    BREAK(topStart = 16f, topEnd = 44f, bottomEnd = 16f, bottomStart = 44f, waveAmplitude = 10f);
+    /** On break: dimmer, in the break colour. */
+    BREAK(glowAlpha = 0.22f, glowRadius = 0.70f, glowCenterY = 0.40f);
 
     companion object {
         /** A break only exists inside a shift; a stale break flag while clocked out reads as READY. */

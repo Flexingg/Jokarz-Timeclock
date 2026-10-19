@@ -19,8 +19,8 @@
 
         <ImageView
             android:id="@+id/widget_dot"
-            android:layout_width="8dp"
-            android:layout_height="8dp"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
             android:contentDescription="@null"
             android:src="@drawable/widget_dot_idle" />
 
@@ -28,7 +28,7 @@
             android:id="@+id/widget_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="7dp"
+            android:layout_marginStart="4dp"
             android:fontFamily="sans-serif-medium"
             android:letterSpacing="0.12"
             android:text="READY FOR SHIFT"
@@ -42,6 +42,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:fontFamily="sans-serif-light"
+        android:fontFeatureSettings="tnum"
         android:textColor="#FFF7EEFB"
         android:textSize="38sp"
         android:visibility="gone" />
@@ -52,6 +53,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:fontFamily="sans-serif-light"
+        android:fontFeatureSettings="tnum"
         android:text="0h 0m"
         android:textColor="#FFF7EEFB"
         android:textSize="38sp" />

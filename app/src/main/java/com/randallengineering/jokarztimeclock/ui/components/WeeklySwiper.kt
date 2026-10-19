@@ -97,8 +97,8 @@ fun GoogleWeeklySwiper(
             items(weekDataList) { data ->
                 Surface(
                     shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                    tonalElevation = 2.dp,
+                    color = fluidCardColor(),
+                    border = fluidContour(),
                     modifier = Modifier.width(260.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {

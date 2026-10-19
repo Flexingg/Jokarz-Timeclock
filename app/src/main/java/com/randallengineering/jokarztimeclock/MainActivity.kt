@@ -1,6 +1,30 @@
 package com.randallengineering.jokarztimeclock
 
 import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.Brush
+import com.randallengineering.jokarztimeclock.ui.components.FluidCard
+import com.randallengineering.jokarztimeclock.ui.components.FluidIconButton
+import com.randallengineering.jokarztimeclock.ui.components.FluidIsland
+import com.randallengineering.jokarztimeclock.ui.components.FluidSegmented
+import com.randallengineering.jokarztimeclock.ui.components.IslandAction
+import com.randallengineering.jokarztimeclock.ui.components.fluidAmbientLight
+import com.randallengineering.jokarztimeclock.ui.components.fluidContour
+import com.randallengineering.jokarztimeclock.ui.components.fluidPageColor
+import com.randallengineering.jokarztimeclock.ui.components.fluidGlassFill
+import androidx.compose.material3.Snackbar
+import com.randallengineering.jokarztimeclock.ui.theme.FluidGlass
+import com.randallengineering.jokarztimeclock.ui.theme.LocalFluid
+import dev.chrisbanes.haze.HazeProgressive
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeChild
 import android.os.Bundle
 import java.util.Locale
 import androidx.activity.ComponentActivity
@@ -140,7 +164,7 @@ class MainActivity : ComponentActivity() {
                 permissionLauncher.launch(permissions.toTypedArray())
             }
 
-            JokarzTimeclockTheme(themeMode = state.settings.theme) {
+            JokarzTimeclockTheme(themeMode = state.settings.theme, reduceTransparency = state.settings.reduceTransparency) {
                 GoogleTimeclockScreen(
                     viewModel = viewModel,
                     state = state,
@@ -264,423 +288,262 @@ fun GoogleTimeclockScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            shape = MaterialShapes.Cookie9Sided.toShape(),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.size(38.dp)
+    // The Living Flow shell: content runs edge to edge as the blur source, under a frosted top bar
+    // and above a floating island; the page carries a soft primary-coloured wash.
+    val hazeState = remember { HazeState() }
+    CompositionLocalProvider(LocalFluid provides LocalFluid.current.copy(hazeState = hazeState)) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .fluidAmbientLight()
+                    .haze(hazeState)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Spacer(modifier = Modifier.height(TOP_BAR_HEIGHT))
+
+                    // Always visible, straight from BuildConfig, so the owner can see which build is installed.
+                    Text(
+                        text = AppVersion.label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Gross / Take Home + hourly rate capsule
+                    FluidCard(shape = PillShape, modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp)
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
+                            // Gross vs Take Home: a segmented pill whose indicator glides between options.
+                            FluidSegmented(
+                                options = listOf(PayMode.GROSS, PayMode.NET),
+                                selected = state.displayMode,
+                                onSelect = { viewModel.setMode(it) },
+                                label = { if (it == PayMode.GROSS) "Gross" else "Take Home" },
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            // Editable Rate
+                            val currentRate = if (state.displayMode == PayMode.GROSS) state.grossRate else state.netRate
+                            var rateText by remember(currentRate) { mutableStateOf<String>(String.format(Locale.US, "%.1f", currentRate)) }
+                            // Only a valid rate is applied; anything else stays on screen in the error colour.
+                            val rateCheck = InputValidation.rate(rateText)
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(end = 4.dp)
+                            ) {
                                 Icon(
-                                    imageVector = Icons.Rounded.Timer,
+                                    imageVector = Icons.Rounded.AttachMoney,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(20.dp)
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                BasicTextField(
+                                    value = rateText,
+                                    onValueChange = { newText: String ->
+                                        rateText = newText
+                                        InputValidation.rate(newText).value?.let { r: Double ->
+                                            viewModel.setRate(state.displayMode, r)
+                                        }
+                                    },
+                                    textStyle = MaterialTheme.typography.titleSmall.copy(
+                                        color = if (rateCheck.ok) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
+                                    ),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                    modifier = Modifier
+                                        .width(52.dp)
+                                        .semantics { if (!rateCheck.ok) error(rateCheck.error ?: "Invalid rate") }
+                                )
+                                Text(
+                                    text = "/hr",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "Timeclock",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Randall Engineering",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
-                },
-                actions = {
-                    // Overtime System Input button with Badge
-                    BadgedBox(
-                        badge = {
-                            if (pendingOtCount > 0) {
-                                Badge(
-                                    containerColor = MaterialTheme.colorScheme.error,
-                                    contentColor = MaterialTheme.colorScheme.onError
-                                ) {
-                                    Text("$pendingOtCount", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // The hero stage with Live Real-Time Ticking, plus the "done" badge that pops
+                    // in its top-end corner (away from the timer) after a clock in/out or an import.
+                    Box(contentAlignment = Alignment.TopEnd) {
+                        GoogleClockHero(
+                            state = state,
+                            currentTickMs = currentTick,
+                            onClockToggle = {
+                                // Fire-and-forget: Vibrator.vibrate() returns immediately, so the state
+                                // change below is never held up by the haptic.
+                                if (state.settings.hapticEnabled) viewModel.audioHaptic.vibrate(HAPTIC_TAP_MS)
+                                viewModel.toggleClock()
+                                if (!state.isClockedIn) {
+                                    showUndoSnackbar("Clocked In successfully.")
+                                } else {
+                                    showUndoSnackbar("Clocked Out successfully.")
                                 }
+                            },
+                            onBreakToggle = { viewModel.toggleBreak() },
+                            onEditStartClick = { showEditActiveDialog = true }
+                        )
+                        ConfirmationBurst(
+                            trigger = state.isClockedIn to importConfirmations,
+                            reducedMotion = reducedMotion,
+                            modifier = Modifier.padding(top = 20.dp, end = 14.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // ColourOS / battery / notification reality check — renders only when something is wrong.
+                    LiveChipHealthCard(
+                        isClockedIn = state.isClockedIn,
+                        liveNotificationEnabled = state.settings.liveNotificationEnabled,
+                        notificationsPermissionGranted = notificationsGranted,
+                        batteryExempt = batteryExempt,
+                        chipSnapshot = chipSnapshot,
+                        versionLabel = AppVersion.label,
+                        onAllowNotifications = {
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                activity?.let { PermissionHelper.openNotificationSettings(it) }
                             }
-                        }
-                    ) {
-                        ScaledFilledTonalIconButton(
+                        },
+                        onRequestBatteryExemption = {
+                            val launched = activity?.let { PermissionHelper.requestIgnoreBatteryOptimizations(it) } ?: false
+                            if (launched != true) {
+                                activity?.let { PermissionHelper.openAutostartSettings(it) }
+                            }
+                        },
+                        onOpenAutostart = {
+                            activity?.let { PermissionHelper.openAutostartSettings(it) }
+                        },
+                        onOpenNotificationSettings = {
+                            activity?.let { PermissionHelper.openNotificationSettings(it) }
+                        },
+                        onOpenPromotionSettings = {
+                            activity?.let { LiveChipStatusReader.openPromotionSettings(it) }
+                        },
+                        onRecheckChip = { chipSnapshot = LiveChipStatusReader.read(context) }
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Today & Pay Period summary cards
+                    GoogleSummaryCards(totals = totals, hideMoney = state.settings.hideMoneyAmounts)
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Weekly Swiper
+                    GoogleWeeklySwiper(state = state)
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Session History Log
+                    GoogleSessionLogList(
+                        sessions = state.sessions,
+                        onSessionClick = { idx, s ->
+                            selectedSessionForEdit = Pair(idx, s)
+                        },
+                        // PeriodTotals' end is the last millisecond of the period; the filter wants [start, end).
+                        payPeriod = totals.startOfPeriod to totals.endOfPeriod + 1L,
+                        onAddShift = { showAddShiftDialog = true }
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Room to scroll the last card clear of the floating island.
+                    Spacer(modifier = Modifier.height(112.dp))
+                }
+            }
+
+            FluidTopBar(
+                pendingOtCount = pendingOtCount,
+                moneyHidden = state.settings.hideMoneyAmounts,
+                onOvertime = {
+                    viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
+                    showOvertimeDialog = true
+                },
+                onToggleMoney = {
+                    viewModel.updateSettings(state.settings.copy(hideMoneyAmounts = !state.settings.hideMoneyAmounts))
+                    viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
+                },
+                onAnalytics = {
+                    viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
+                    showAnalyticsDialog = true
+                },
+                onSettings = {
+                    viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
+                    showSettingsDialog = true
+                },
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                // Toasts float as glass pills above the island.
+                SnackbarHost(snackbarHostState) { data ->
+                    Snackbar(
+                        snackbarData = data,
+                        shape = PillShape,
+                        containerColor = fluidGlassFill(FluidGlass.regular).copy(alpha = 1f),
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        actionColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .padding(bottom = 10.dp)
+                            .border(fluidContour(), PillShape)
+                    )
+                }
+                FluidIsland(
+                    primary = IslandAction("Add Shift", Icons.Rounded.Add, onClick = {
+                        viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
+                        showAddShiftDialog = true
+                    }),
+                    actions = listOf(
+                        IslandAction(
+                            label = "OT Input",
+                            icon = Icons.AutoMirrored.Rounded.FactCheck,
                             onClick = {
                                 viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
                                 showOvertimeDialog = true
                             },
-                            colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                containerColor = if (pendingOtCount > 0) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.FactCheck,
-                                contentDescription = "Overtime System Input",
-                                tint = if (pendingOtCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    ScaledFilledTonalIconButton(
-                        onClick = {
-                            val newHide = !state.settings.hideMoneyAmounts
-                            viewModel.updateSettings(state.settings.copy(hideMoneyAmounts = newHide))
-                            viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
-                        },
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            badge = pendingOtCount,
+                            alert = pendingOtCount > 0
                         ),
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (state.settings.hideMoneyAmounts) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
-                            contentDescription = "Toggle Money Visibility",
-                            tint = if (state.settings.hideMoneyAmounts) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    ScaledFilledTonalIconButton(
-                        onClick = {
+                        IslandAction("PTO / Hol", Icons.Rounded.CalendarMonth, onClick = {
                             viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
-                            showAnalyticsDialog = true
-                        },
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.BarChart,
-                            contentDescription = "Analytics",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    ScaledFilledTonalIconButton(
-                        onClick = {
+                            showPtoDialog = true
+                        }),
+                        IslandAction("Report", Icons.Rounded.Description, onClick = {
                             viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
-                            showSettingsDialog = true
-                        },
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Settings,
-                            contentDescription = "Settings",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // Always visible, straight from BuildConfig, so the owner can see which build is installed.
-            Text(
-                text = AppVersion.label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // Google Material 3 Segmented Rate Switcher & Input Capsule
-            Surface(
-                shape = PillShape,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                tonalElevation = 1.dp,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    // Gross vs Take Home: a connected single-choice group (extra-small, 32 dp).
-                    ConnectedToggleGroup(
-                        options = listOf(PayMode.GROSS, PayMode.NET),
-                        selected = state.displayMode,
-                        onSelect = { viewModel.setMode(it) },
-                        label = { if (it == PayMode.GROSS) "Gross" else "Take Home" },
-                        size = ExpressiveButtonSize.ExtraSmall,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // Editable Rate
-                    val currentRate = if (state.displayMode == PayMode.GROSS) state.grossRate else state.netRate
-                    var rateText by remember(currentRate) { mutableStateOf<String>(String.format(Locale.US, "%.1f", currentRate)) }
-                    // Only a valid rate is applied; anything else stays on screen in the error colour.
-                    val rateCheck = InputValidation.rate(rateText)
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(end = 4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.AttachMoney,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        BasicTextField(
-                            value = rateText,
-                            onValueChange = { newText: String ->
-                                rateText = newText
-                                InputValidation.rate(newText).value?.let { r: Double ->
-                                    viewModel.setRate(state.displayMode, r)
-                                }
-                            },
-                            textStyle = MaterialTheme.typography.titleSmall.copy(
-                                color = if (rateCheck.ok) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error
-                            ),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            modifier = Modifier
-                                .width(52.dp)
-                                .semantics { if (!rateCheck.ok) error(rateCheck.error ?: "Invalid rate") }
-                        )
-                        Text(
-                            text = "/hr",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Google Clock Hero Widget with Live Real-Time Ticking, plus the "done" badge that pops
-            // in its top-end corner (away from the timer) after a clock in/out or an import.
-            Box(contentAlignment = Alignment.TopEnd) {
-                GoogleClockHero(
-                    state = state,
-                    currentTickMs = currentTick,
-                    onClockToggle = {
-                        // Fire-and-forget: Vibrator.vibrate() returns immediately, so the state
-                        // change below is never held up by the haptic.
-                        if (state.settings.hapticEnabled) viewModel.audioHaptic.vibrate(HAPTIC_TAP_MS)
-                        viewModel.toggleClock()
-                        if (!state.isClockedIn) {
-                            showUndoSnackbar("Clocked In successfully.")
-                        } else {
-                            showUndoSnackbar("Clocked Out successfully.")
-                        }
-                    },
-                    onBreakToggle = { viewModel.toggleBreak() },
-                    onEditStartClick = { showEditActiveDialog = true }
-                )
-                ConfirmationBurst(
-                    trigger = state.isClockedIn to importConfirmations,
-                    reducedMotion = reducedMotion,
-                    modifier = Modifier.padding(top = 20.dp, end = 14.dp)
+                            showReportDialog = true
+                        })
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // ColourOS / battery / notification reality check — renders only when something is wrong.
-            LiveChipHealthCard(
-                isClockedIn = state.isClockedIn,
-                liveNotificationEnabled = state.settings.liveNotificationEnabled,
-                notificationsPermissionGranted = notificationsGranted,
-                batteryExempt = batteryExempt,
-                chipSnapshot = chipSnapshot,
-                versionLabel = AppVersion.label,
-                onAllowNotifications = {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    } else {
-                        activity?.let { PermissionHelper.openNotificationSettings(it) }
-                    }
-                },
-                onRequestBatteryExemption = {
-                    val launched = activity?.let { PermissionHelper.requestIgnoreBatteryOptimizations(it) } ?: false
-                    if (launched != true) {
-                        activity?.let { PermissionHelper.openAutostartSettings(it) }
-                    }
-                },
-                onOpenAutostart = {
-                    activity?.let { PermissionHelper.openAutostartSettings(it) }
-                },
-                onOpenNotificationSettings = {
-                    activity?.let { PermissionHelper.openNotificationSettings(it) }
-                },
-                onOpenPromotionSettings = {
-                    activity?.let { LiveChipStatusReader.openPromotionSettings(it) }
-                },
-                onRecheckChip = { chipSnapshot = LiveChipStatusReader.read(context) }
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Google Assist Action Chips
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                ScaledAssistChip(
-                    onClick = {
-                        viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
-                        showAddShiftDialog = true
-                    },
-                    label = { Text("Add Shift", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Rounded.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(15.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    },
-                    shape = PillShape,
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                    ),
-                    border = null,
-                    modifier = Modifier.weight(1f)
-                )
-
-                ScaledAssistChip(
-                    onClick = {
-                        viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
-                        showOvertimeDialog = true
-                    },
-                    label = {
-                        Text(
-                            text = if (pendingOtCount > 0) "OT ($pendingOtCount)" else "OT Input",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = if (pendingOtCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.FactCheck,
-                            contentDescription = null,
-                            modifier = Modifier.size(15.dp),
-                            tint = if (pendingOtCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                        )
-                    },
-                    shape = PillShape,
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = if (pendingOtCount > 0) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                    ),
-                    border = null,
-                    modifier = Modifier.weight(1f)
-                )
-
-                ScaledAssistChip(
-                    onClick = {
-                        viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
-                        showPtoDialog = true
-                    },
-                    label = { Text("PTO/Hol", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Rounded.CalendarMonth,
-                            contentDescription = null,
-                            modifier = Modifier.size(15.dp),
-                            tint = MaterialTheme.colorScheme.tertiary
-                        )
-                    },
-                    shape = PillShape,
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                    ),
-                    border = null,
-                    modifier = Modifier.weight(1f)
-                )
-
-                ScaledAssistChip(
-                    onClick = {
-                        viewModel.audioHaptic.playClickSound(state.settings.soundEnabled)
-                        showReportDialog = true
-                    },
-                    label = { Text("Report", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Rounded.Description,
-                            contentDescription = null,
-                            modifier = Modifier.size(15.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    shape = PillShape,
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                    ),
-                    border = null,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Google-styled Today & Pay Period Summary Cards
-            GoogleSummaryCards(totals = totals, hideMoney = state.settings.hideMoneyAmounts)
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Weekly Swiper
-            GoogleWeeklySwiper(state = state)
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Session History Log
-            GoogleSessionLogList(
-                sessions = state.sessions,
-                onSessionClick = { idx, s ->
-                    selectedSessionForEdit = Pair(idx, s)
-                },
-                // PeriodTotals' end is the last millisecond of the period; the filter wants [start, end).
-                payPeriod = totals.startOfPeriod to totals.endOfPeriod + 1L,
-                onAddShift = { showAddShiftDialog = true }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 
@@ -807,5 +670,92 @@ fun GoogleTimeclockScreen(
             totals = totals,
             onDismiss = { showReportDialog = false }
         )
+    }
+}
+
+
+private val TOP_BAR_HEIGHT = 72.dp
+
+/**
+ * The frosted top bar: the brand on the left, circular glass actions on the right. Content scrolls
+ * beneath it and is blurred progressively (strongest at the top edge, none at its bottom), so there
+ * is never a hard-edged band.
+ */
+@Composable
+private fun FluidTopBar(
+    pendingOtCount: Int,
+    moneyHidden: Boolean,
+    onOvertime: () -> Unit,
+    onToggleMoney: () -> Unit,
+    onAnalytics: () -> Unit,
+    onSettings: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val env = LocalFluid.current
+    val page = fluidPageColor()
+    val backdrop = if (env.glass && env.hazeState != null) {
+        Modifier.hazeChild(env.hazeState, HazeStyle(page, listOf(HazeTint(page.copy(alpha = 0.55f))), FluidGlass.regular.blur, 0f, HazeTint(page))) {
+            progressive = HazeProgressive.verticalGradient(startIntensity = 1f, endIntensity = 0f)
+        }
+    } else {
+        Modifier.background(Brush.verticalGradient(listOf(page, page, page.copy(alpha = 0f))))
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(TOP_BAR_HEIGHT)
+            .then(backdrop)
+            .padding(horizontal = 16.dp)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(40.dp)
+                .background(
+                    Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)),
+                    CircleShape
+                )
+                .border(fluidContour(), CircleShape)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Timer,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Timeclock",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
+            Text(
+                text = "Randall Engineering",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FluidIconButton(
+                icon = Icons.AutoMirrored.Rounded.FactCheck,
+                contentDescription = "Overtime System Input",
+                onClick = onOvertime,
+                badge = pendingOtCount
+            )
+            FluidIconButton(
+                icon = if (moneyHidden) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                contentDescription = "Toggle Money Visibility",
+                onClick = onToggleMoney,
+                active = moneyHidden
+            )
+            FluidIconButton(icon = Icons.Rounded.BarChart, contentDescription = "Analytics", onClick = onAnalytics)
+            FluidIconButton(icon = Icons.Rounded.Settings, contentDescription = "Settings", onClick = onSettings)
+        }
     }
 }

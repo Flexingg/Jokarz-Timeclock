@@ -37,6 +37,8 @@ data class AppSettings(
     val notificationsEnabled: Boolean = true,
     val liveNotificationEnabled: Boolean = true,
     val hideMoneyAmounts: Boolean = false,
+    // Accessibility: replace every frosted-glass surface with an opaque one.
+    val reduceTransparency: Boolean = false,
     val autoBreakDeduction: Boolean = true,
     val geofenceEnabled: Boolean = false,
     val useTaskerFallback: Boolean = false,

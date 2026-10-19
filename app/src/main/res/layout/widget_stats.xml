@@ -38,6 +38,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:fontFamily="sans-serif-light"
+        android:fontFeatureSettings="tnum"
             android:textColor="#FFF7EEFB"
             android:textSize="28sp" />
 
@@ -88,6 +89,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:fontFamily="sans-serif-light"
+        android:fontFeatureSettings="tnum"
             android:textColor="#FFF7EEFB"
             android:textSize="28sp" />
 

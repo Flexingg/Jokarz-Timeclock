@@ -20,6 +20,13 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.runtime.SideEffect
+import android.os.Build
+import android.view.WindowManager
+import com.randallengineering.jokarztimeclock.ui.theme.FluidGlass
+import com.randallengineering.jokarztimeclock.ui.theme.LocalFluid
 import com.randallengineering.jokarztimeclock.ui.theme.DialogMotion
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.launch
@@ -85,6 +92,7 @@ fun ExpressiveAlertDialog(
                     throw e
                 }
             }
+            DialogBackdropBlur()
             CompositionLocalProvider(LocalDialogBack provides back) { confirmButton() }
         },
         dismissButton = dismissButton?.let { slot -> { CompositionLocalProvider(LocalDialogBack provides back) { slot() } } },
@@ -92,6 +100,8 @@ fun ExpressiveAlertDialog(
         title = title,
         text = text?.let { slot -> { CompositionLocalProvider(LocalDialogBack provides back) { slot() } } },
         shape = MaterialTheme.shapes.extraLarge,
+        // Thick frosted glass over a blurred screen (DialogBackdropBlur); opaque when glass is off.
+        containerColor = fluidGlassFill(FluidGlass.thick),
         properties = properties,
         modifier = modifier.graphicsLayer {
             val p = progress.value
@@ -101,6 +111,25 @@ fun ExpressiveAlertDialog(
         }
     )
 }
+
+/**
+ * Blurs everything behind the dialog's window (Android 12+ window blur), so the dialog reads as a
+ * sheet of thick glass over the app. Skipped with "Reduce transparency" on, below Android 12, or
+ * when the device has cross-window blur disabled (battery saver, some ROMs): the scrim then dims as usual.
+ */
+@Composable
+private fun DialogBackdropBlur() {
+    val glass = LocalFluid.current.glass
+    val window = (LocalView.current.parent as? DialogWindowProvider)?.window ?: return
+    SideEffect {
+        if (!glass || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return@SideEffect
+        if (!window.windowManager.isCrossWindowBlurEnabled) return@SideEffect
+        window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+        window.attributes = window.attributes.apply { blurBehindRadius = DIALOG_BLUR_PX }
+    }
+}
+
+private const val DIALOG_BLUR_PX = 60
 
 /**
  * The dialog's "back" action (Cancel / Close / Done): closes the enclosing [ExpressiveAlertDialog]

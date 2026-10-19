@@ -566,6 +566,7 @@ fun SettingsDialog(
     var theme by remember { mutableStateOf(currentSettings.theme) }
     var soundEnabled by remember { mutableStateOf(currentSettings.soundEnabled) }
     var hapticEnabled by remember { mutableStateOf(currentSettings.hapticEnabled) }
+    var reduceTransparency by remember { mutableStateOf(currentSettings.reduceTransparency) }
     var notificationsEnabled by remember { mutableStateOf(currentSettings.notificationsEnabled) }
     var liveNotificationEnabled by remember { mutableStateOf(currentSettings.liveNotificationEnabled) }
     var hideMoneyAmounts by remember { mutableStateOf(currentSettings.hideMoneyAmounts) }
@@ -934,6 +935,10 @@ fun SettingsDialog(
                     Checkbox(checked = hapticEnabled, onCheckedChange = { hapticEnabled = it })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Text("Reduce Transparency (solid, no glass blur)", style = MaterialTheme.typography.bodySmall)
+                    Checkbox(checked = reduceTransparency, onCheckedChange = { reduceTransparency = it })
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text("Shift Milestone Notifications", style = MaterialTheme.typography.bodySmall)
                     Checkbox(checked = notificationsEnabled, onCheckedChange = { notificationsEnabled = it })
                 }
@@ -1048,6 +1053,7 @@ fun SettingsDialog(
                             theme = theme,
                             soundEnabled = soundEnabled,
                             hapticEnabled = hapticEnabled,
+                            reduceTransparency = reduceTransparency,
                             notificationsEnabled = notificationsEnabled,
                             liveNotificationEnabled = liveNotificationEnabled,
                             hideMoneyAmounts = hideMoneyAmounts,

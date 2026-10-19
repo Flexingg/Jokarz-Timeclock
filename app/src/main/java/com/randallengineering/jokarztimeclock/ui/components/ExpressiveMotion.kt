@@ -145,10 +145,15 @@ fun Modifier.pressScale(interactionSource: InteractionSource): Modifier {
  * place of a bare `Modifier.clickable {}` on any custom tappable surface.
  */
 @Composable
-fun Modifier.expressiveClickable(enabled: Boolean = true, onClick: () -> Unit): Modifier {
+fun Modifier.expressiveClickable(
+    enabled: Boolean = true,
+    shape: androidx.compose.ui.graphics.Shape = androidx.compose.ui.graphics.RectangleShape,
+    onClick: () -> Unit
+): Modifier {
     val interaction = remember { MutableInteractionSource() }
     return this
         .pressScale(interaction)
+        .touchGlow(interaction, shape)
         .clickable(
             interactionSource = interaction,
             indication = ripple(),

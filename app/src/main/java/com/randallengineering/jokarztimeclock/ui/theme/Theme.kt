@@ -11,6 +11,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -184,6 +185,7 @@ internal val AppMotionScheme: MotionScheme = MotionScheme.standard()
 fun JokarzTimeclockTheme(
     themeMode: ThemeMode = ThemeMode.LIGHT,
     darkTheme: Boolean = isSystemInDarkTheme(),
+    reduceTransparency: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -195,11 +197,13 @@ fun JokarzTimeclockTheme(
 
     val view = LocalView.current
     val useLightStatusBarIcons = colorScheme.background.luminance() > 0.5f
+    // The Fluid page base (see fluidPageColor): the system bars blend into it.
+    val pageColor = if (useLightStatusBarIcons) colorScheme.surfaceContainer else colorScheme.surfaceContainerLowest
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            window.navigationBarColor = colorScheme.background.toArgb()
+            window.statusBarColor = pageColor.toArgb()
+            window.navigationBarColor = pageColor.toArgb()
             // Derived from the resolved scheme, so DYNAMIC + a light wallpaper also gets dark icons.
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = useLightStatusBarIcons
         }
@@ -213,6 +217,9 @@ fun JokarzTimeclockTheme(
         motionScheme = AppMotionScheme,
         typography = Typography,
         shapes = AppShapes,
-        content = content
-    )
+    ) {
+        // Frosted glass needs RenderEffect (Android 12+); "Reduce transparency" turns it off too.
+        val glass = !reduceTransparency && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+        CompositionLocalProvider(LocalFluid provides FluidEnvironment(glass = glass), content = content)
+    }
 }

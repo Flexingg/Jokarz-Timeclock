@@ -179,6 +179,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Widgets pick their colours from the current theme and system dark mode, which can change
+        // while the app is closed: repaint them whenever the app is opened.
+        com.randallengineering.jokarztimeclock.widget.WidgetUpdater.updateAll(this)
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleIntent(intent)

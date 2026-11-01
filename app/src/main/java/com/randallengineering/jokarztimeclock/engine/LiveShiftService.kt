@@ -354,6 +354,8 @@ class LiveShiftService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_LIVE_ID)
             .setSmallIcon(R.drawable.ic_stat_stopwatch)
+            // The chip's accent follows the app's current UI theme, like the widgets.
+            .setColor(com.randallengineering.jokarztimeclock.widget.WidgetPalette.of(this, repository.state.value.settings.theme).primary)
             .setContentTitle(chip.title)
             .setContentText(chip.contentText)
             .apply {

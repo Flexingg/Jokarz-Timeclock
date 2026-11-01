@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A translucent pill (tonal buttons, chips): the alpha is baked in, the colour is tinted at runtime. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#2EFFFFFF" />
+    <corners android:radius="100dp" />
+</shape>

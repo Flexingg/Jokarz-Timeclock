@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The card: base, top sheen, accent glow and contour, each tinted from the app theme at runtime. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_bg"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <ImageView android:id="@+id/widget_bg_base" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" android:scaleType="fitXY" android:src="@drawable/w_card" android:tint="#FF241C2C" />
+    <ImageView android:id="@+id/widget_bg_sheen" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" android:scaleType="fitXY" android:src="@drawable/w_card_sheen" android:tint="#FFFFFFFF" />
+    <ImageView android:id="@+id/widget_bg_glow" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" android:scaleType="fitXY" android:src="@drawable/w_card_glow" android:tint="#FFB57CFF" />
+    <ImageView android:id="@+id/widget_bg_edge" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" android:scaleType="fitXY" android:src="@drawable/w_card_edge" android:tint="#FFFFFFFF" />
+</FrameLayout>

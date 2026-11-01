@@ -204,6 +204,9 @@ fun JokarzTimeclockTheme(
             val window = (view.context as Activity).window
             window.statusBarColor = pageColor.toArgb()
             window.navigationBarColor = pageColor.toArgb()
+            // The window itself (visible during the launch / rotation flash) wears the theme's page colour,
+            // not the XML default, so an in-app theme that differs from the system's never flashes the wrong one.
+            window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(pageColor.toArgb()))
             // Derived from the resolved scheme, so DYNAMIC + a light wallpaper also gets dark icons.
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = useLightStatusBarIcons
         }

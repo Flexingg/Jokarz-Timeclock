@@ -1,121 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
-    android:gravity="center_vertical"
-    android:orientation="vertical"
-    android:paddingStart="18dp"
-    android:paddingTop="14dp"
-    android:paddingEnd="18dp"
-    android:paddingBottom="14dp">
+    android:layout_height="match_parent">
 
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <ImageView
-            android:id="@+id/widget_dot"
-            android:layout_width="14dp"
-            android:layout_height="14dp"
-            android:contentDescription="@null"
-            android:src="@drawable/widget_dot_idle" />
-
-        <TextView
-            android:id="@+id/widget_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.12"
-            android:text="READY FOR SHIFT"
-            android:textColor="#FFCFC2D6"
-            android:textSize="11sp" />
-    </LinearLayout>
-
-    <Chronometer
-        android:id="@+id/widget_timer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:fontFamily="sans-serif-light"
-        android:fontFeatureSettings="tnum"
-        android:textColor="#FFF7EEFB"
-        android:textSize="38sp"
-        android:visibility="gone" />
-
-    <TextView
-        android:id="@+id/widget_idle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:fontFamily="sans-serif-light"
-        android:fontFeatureSettings="tnum"
-        android:text="0h 0m"
-        android:textColor="#FFF7EEFB"
-        android:textSize="38sp" />
-
-    <TextView
-        android:id="@+id/widget_caption"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="worked today"
-        android:textColor="#FFB3A5BB"
-        android:textSize="12sp" />
-
-    <LinearLayout
+    <include
+        layout="@layout/widget_card_bg"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:layout_height="match_parent" />
 
-        <LinearLayout
-            android:id="@+id/widget_break_row"
-            android:layout_width="48dp"
-            android:layout_height="44dp"
-            android:layout_marginEnd="8dp"
-            android:background="@drawable/widget_button_tonal"
-            android:gravity="center"
-            android:visibility="gone">
-
-            <ImageView
-                android:id="@+id/widget_break_icon"
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:contentDescription="Start or end break"
-                android:src="@drawable/ic_widget_pause" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="vertical" android:paddingStart="18dp" android:paddingTop="10dp" android:paddingEnd="18dp" android:paddingBottom="12dp">
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+            <FrameLayout android:layout_width="14dp" android:layout_height="14dp">
+                <ImageView android:id="@+id/widget_dot_halo" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" android:src="@drawable/w_dot_halo" android:tint="#FFB3A5BB" />
+                <ImageView android:id="@+id/widget_dot" android:layout_width="6dp" android:layout_height="6dp" android:layout_gravity="center" android:contentDescription="@null" android:src="@drawable/w_dot" android:tint="#FFB3A5BB" />
+            </FrameLayout>
+            <TextView android:id="@+id/widget_status" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="4dp" android:fontFamily="sans-serif-medium" android:letterSpacing="0.12" android:maxLines="1" android:text="READY FOR SHIFT" android:textColor="#FFCFC2D6" android:textSize="11sp" />
         </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/widget_action_row"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_weight="1"
-            android:background="@drawable/widget_button_play"
-            android:gravity="center"
-            android:orientation="horizontal">
-
-            <ImageView
-                android:id="@+id/widget_action_icon"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:contentDescription="@null"
-                android:src="@drawable/ic_widget_play" />
-
-            <TextView
-                android:id="@+id/widget_action"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:fontFamily="sans-serif-medium"
-                android:maxLines="1"
-                android:text="Clock In"
-                android:textColor="#FF4A0A6B"
-                android:textSize="15sp" />
+        <Chronometer android:id="@+id/widget_timer" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-light" android:fontFeatureSettings="tnum" android:maxLines="1" android:textColor="#FFF7EEFB" android:textSize="38sp" android:visibility="gone" />
+        <TextView android:id="@+id/widget_idle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:fontFamily="sans-serif-light" android:fontFeatureSettings="tnum" android:maxLines="1" android:text="0h 0m" android:textColor="#FFF7EEFB" android:textSize="38sp" />
+        <TextView android:id="@+id/widget_caption" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="worked today" android:textColor="#FFB3A5BB" android:textSize="12sp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:gravity="center_vertical" android:orientation="horizontal">
+            <FrameLayout android:id="@+id/widget_break_row" android:layout_width="40dp" android:layout_height="40dp" android:layout_marginEnd="8dp" android:visibility="gone">
+                <ImageView android:id="@+id/widget_break_bg" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" android:scaleType="fitXY" android:src="@drawable/w_pill_soft" android:tint="#FFFFFFFF" />
+                <ImageView android:id="@+id/widget_break_edge" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" android:scaleType="fitXY" android:src="@drawable/w_pill_edge" android:tint="#FFFFFFFF" />
+                <ImageView android:id="@+id/widget_break_icon" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:contentDescription="Start or end break" android:src="@drawable/ic_widget_pause" android:tint="#FFF7EEFB" />
+            </FrameLayout>
+            <FrameLayout android:id="@+id/widget_action_row" android:layout_width="0dp" android:layout_height="40dp" android:layout_weight="1">
+                <ImageView android:id="@+id/widget_action_bg" android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" android:scaleType="fitXY" android:src="@drawable/w_pill" android:tint="#FFE0A3FF" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:orientation="horizontal" android:paddingStart="10dp" android:paddingEnd="12dp">
+                    <ImageView android:id="@+id/widget_action_icon" android:layout_width="20dp" android:layout_height="20dp" android:contentDescription="@null" android:src="@drawable/ic_widget_play" android:tint="#FF4A0A6B" />
+                    <TextView android:id="@+id/widget_action" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="6dp" android:fontFamily="sans-serif-medium" android:maxLines="1" android:text="Clock In" android:textColor="#FF4A0A6B" android:textSize="15sp" />
+                </LinearLayout>
+            </FrameLayout>
         </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+</FrameLayout>

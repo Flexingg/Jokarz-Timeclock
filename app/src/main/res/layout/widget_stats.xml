@@ -1,103 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
-    android:gravity="center_vertical"
-    android:orientation="horizontal"
-    android:paddingStart="18dp"
-    android:paddingTop="14dp"
-    android:paddingEnd="18dp"
-    android:paddingBottom="14dp">
+    android:layout_height="match_parent">
 
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
+    <include
+        layout="@layout/widget_card_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
-        <TextView
-            android:id="@+id/widget_today_label"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/widget_chip"
-            android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.1"
-            android:paddingStart="10dp"
-            android:paddingTop="3dp"
-            android:paddingEnd="10dp"
-            android:paddingBottom="3dp"
-            android:text="TODAY"
-            android:textColor="#FFEBB2FF"
-            android:textSize="10sp" />
-
-        <TextView
-            android:id="@+id/widget_today_money"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:fontFamily="sans-serif-light"
-        android:fontFeatureSettings="tnum"
-            android:textColor="#FFF7EEFB"
-            android:textSize="28sp" />
-
-        <TextView
-            android:id="@+id/widget_today_hours"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="#FFB3A5BB"
-            android:textSize="12sp" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="horizontal" android:paddingStart="18dp" android:paddingTop="14dp" android:paddingEnd="18dp" android:paddingBottom="14dp">
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+            <FrameLayout android:layout_width="wrap_content" android:layout_height="wrap_content">
+                <ImageView android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" android:scaleType="fitXY" android:src="@drawable/w_pill" android:tint="#FF4A2C73" android:id="@+id/widget_today_label_bg" />
+                <TextView android:id="@+id/widget_today_label" android:layout_width="match_parent" android:layout_height="match_parent" android:fontFamily="sans-serif-medium" android:letterSpacing="0.1" android:maxLines="1" android:paddingStart="10dp" android:paddingTop="3dp" android:paddingEnd="10dp" android:paddingBottom="3dp" android:text="TODAY" android:textColor="#FFEBB2FF" android:textSize="10sp" />
+            </FrameLayout>
+            <TextView android:id="@+id/widget_today_money" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:fontFamily="sans-serif-light" android:fontFeatureSettings="tnum" android:maxLines="1" android:textColor="#FFF7EEFB" android:textSize="28sp" />
+            <TextView android:id="@+id/widget_today_hours" android:layout_width="wrap_content" android:layout_height="wrap_content" android:maxLines="1" android:textColor="#FFB3A5BB" android:textSize="12sp" />
+        </LinearLayout>
+        <ImageView android:id="@+id/widget_vdivider" android:layout_width="1dp" android:layout_height="match_parent" android:layout_marginStart="12dp" android:layout_marginTop="4dp" android:layout_marginEnd="16dp" android:layout_marginBottom="4dp" android:contentDescription="@null" android:scaleType="fitXY" android:src="@drawable/w_divider" android:tint="#FFFFFFFF" />
+        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+            <FrameLayout android:layout_width="wrap_content" android:layout_height="wrap_content">
+                <ImageView android:layout_width="match_parent" android:layout_height="match_parent" android:contentDescription="@null" android:scaleType="fitXY" android:src="@drawable/w_pill" android:tint="#FF4A2C73" android:id="@+id/widget_period_label_bg" />
+                <TextView android:id="@+id/widget_period_label" android:layout_width="match_parent" android:layout_height="match_parent" android:fontFamily="sans-serif-medium" android:letterSpacing="0.1" android:maxLines="1" android:paddingStart="10dp" android:paddingTop="3dp" android:paddingEnd="10dp" android:paddingBottom="3dp" android:text="PAY PERIOD" android:textColor="#FFEBB2FF" android:textSize="10sp" />
+            </FrameLayout>
+            <TextView android:id="@+id/widget_period_money" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:fontFamily="sans-serif-light" android:fontFeatureSettings="tnum" android:maxLines="1" android:textColor="#FFF7EEFB" android:textSize="28sp" />
+            <TextView android:id="@+id/widget_period_hours" android:layout_width="wrap_content" android:layout_height="wrap_content" android:maxLines="1" android:textColor="#FFB3A5BB" android:textSize="12sp" />
+        </LinearLayout>
     </LinearLayout>
-
-    <!-- ImageView, not View: a home-screen widget may only contain RemoteViews-approved classes. -->
-    <ImageView
-        android:layout_width="1dp"
-        android:layout_height="match_parent"
-        android:layout_marginStart="12dp"
-        android:layout_marginTop="4dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="4dp"
-        android:contentDescription="@null"
-        android:scaleType="fitXY"
-        android:src="@drawable/widget_divider" />
-
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
-
-        <TextView
-            android:id="@+id/widget_period_label"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/widget_chip"
-            android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.1"
-            android:paddingStart="10dp"
-            android:paddingTop="3dp"
-            android:paddingEnd="10dp"
-            android:paddingBottom="3dp"
-            android:text="PAY PERIOD"
-            android:textColor="#FFEBB2FF"
-            android:textSize="10sp" />
-
-        <TextView
-            android:id="@+id/widget_period_money"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:fontFamily="sans-serif-light"
-        android:fontFeatureSettings="tnum"
-            android:textColor="#FFF7EEFB"
-            android:textSize="28sp" />
-
-        <TextView
-            android:id="@+id/widget_period_hours"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="#FFB3A5BB"
-            android:textSize="12sp" />
-    </LinearLayout>
-</LinearLayout>
+</FrameLayout>
